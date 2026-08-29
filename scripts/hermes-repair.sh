@@ -1,96 +1,144 @@
-# Hermes 현재 설치 상태 복구
-set -e
+#!/data/data/com.termux/files/usr/bin/bash
 
-HERMES_DIR="$HOME/.hermes/hermes-agent"
+set -u
 
-echo "=== Hermes 복구 시작 ==="
+echo "=========================================="
+echo " YangYang AI - Hermes Repair"
+echo "=========================================="
 
-# 저장소가 이미 있으면 그대로 사용
-if [ ! -d "$HERMES_DIR" ]; then
-    echo "[ERROR] Hermes 저장소가 없습니다:"
-    echo "$HERMES_DIR"
+# Termux 확인
+if [ -z "${PREFIX:-}" ]; then
+    echo "[ERROR] Termux에서 실행해야 합니다."
     exit 1
 fi
 
-cd "$HERMES_DIR"
+echo "[OK] Termux detected"
 
-echo "[OK] Hermes 저장소 발견"
-git status --short
-
-# Python 3.13이 이미 설치되어 있는지 확인
-PY313=""
-
-for p in \
-    "$PREFIX/bin/python3.13" \
-    "$PREFIX/bin/python3.13m" \
-    "$HOME/.local/bin/python3.13"
-do
-    if [ -x "$p" ]; then
-        PY313="$p"
-        break
-    fi
-done
-
-if [ -z "$PY313" ]; then
-    echo
-    echo "[ERROR] Python 3.13이 없습니다."
-    echo
-    echo "현재 Python:"
-    python --version
-    echo
-    echo "먼저 Termux에 Python 3.13을 준비해야 합니다."
-    echo "기존 Python 3.14는 삭제하지 마세요."
-    exit 2
+# proot-distro 확인
+if ! command -v proot-distro >/dev/null 2>&1; then
+    echo "[INSTALL] proot-distro"
+    pkg install -y proot-distro || exit 1
 fi
 
-echo "[OK] Python 3.13 발견:"
-"$PY313" --version
-
-# 기존 실패한 venv만 제거
-if [ -d "$HERMES_DIR/venv" ]; then
-    echo "[INFO] 기존 실패 venv 제거"
-    rm -rf "$HERMES_DIR/venv"
+# Debian 확인
+if ! proot-distro list 2>/dev/null | grep -q "debian"; then
+    echo "[INSTALL] Debian"
+    proot-distro install debian || exit 1
+else
+    echo "[OK] Debian installed"
 fi
 
-echo "[INFO] 새 Hermes venv 생성"
+echo
+echo "=========================================="
+echo " Debian / Python 3.13 / Hermes"
+echo "=========================================="
 
-"$PY313" -m venv "$HERMES_DIR/venv"
+proot-distro login debian -- bash -s <<'DEBIAN'
 
-source "$HERMES_DIR/venv/bin/activate"
+set -e
 
-echo "[OK] Hermes venv:"
+echo "[1/5] Updating Debian"
+
+apt update
+
+echo "[2/5] Installing Python 3.13"
+
+apt install -y \
+    python3.13 \
+    python3.13-venv \
+    python3.13-dev \
+    build-essential \
+    git \
+    curl \
+    ca-certificates
+
+echo
+echo "[CHECK] Python"
+
+python3.13 --version
+
+echo
+echo "[3/5] Preparing Hermes repository"
+
+mkdir -p "$HOME/.hermes"
+
+if [ -d "$HOME/.hermes/hermes-agent/.git" ]; then
+    cd "$HOME/.hermes/hermes-agent"
+
+    echo "[UPDATE] Hermes repository"
+
+    git fetch origin
+    git reset --hard origin/main
+else
+    echo "[CLONE] Hermes repository"
+
+    git clone \
+        https://github.com/NousResearch/hermes-agent.git \
+        "$HOME/.hermes/hermes-agent"
+
+    cd "$HOME/.hermes/hermes-agent"
+fi
+
+echo
+echo "[4/5] Creating Python 3.13 environment"
+
+rm -rf venv
+
+python3.13 -m venv venv
+
+source venv/bin/activate
+
+echo "Python:"
 python --version
 
-# Android API level
-export ANDROID_API_LEVEL="$(getprop ro.build.version.sdk)"
-
-echo "[OK] ANDROID_API_LEVEL=$ANDROID_API_LEVEL"
-
-# 기본 빌드 도구
 python -m pip install --upgrade pip setuptools wheel
 
-# Hermes 공식 Termux 방식
 echo
-echo "=== Hermes 설치 ==="
+echo "[5/5] Installing Hermes"
 
-python -m pip install \
-    -e '.[termux]' \
-    -c constraints-termux.txt
+if python -m pip install -e '.[termux-all]'; then
+    echo "[OK] Hermes termux profile installed"
+else
+    echo "[WARN] termux-all profile failed"
+    echo "[INFO] Trying normal Hermes installation"
 
-# Termux PATH에 hermes 연결
-ln -sf \
-    "$HERMES_DIR/venv/bin/hermes" \
-    "$PREFIX/bin/hermes"
-
-echo
-echo "=== 검사 ==="
-
-command -v hermes
-hermes --version
+    python -m pip install -e .
+fi
 
 echo
-echo "Hermes 설치 완료."
+echo "=========================================="
+echo " Hermes Test"
+echo "=========================================="
+
+if command -v hermes >/dev/null 2>&1; then
+    echo "[OK] Hermes installed"
+    hermes --help
+else
+    echo "[ERROR] Hermes command not found"
+    exit 1
+fi
+
+DEBIAN
+
+STATUS=$?
+
 echo
-echo "다음 명령:"
-echo "  hermes doctor"
-echo "  hermes"
+echo "=========================================="
+
+if [ "$STATUS" -eq 0 ]; then
+    echo " Hermes Repair SUCCESS"
+    echo "=========================================="
+    echo
+    echo "Hermes 실행:"
+    echo
+    echo "proot-distro login debian"
+    echo "source ~/.hermes/hermes-agent/venv/bin/activate"
+    echo "hermes"
+else
+    echo " Hermes Repair FAILED"
+    echo "=========================================="
+    echo
+    echo "위의 오류 메시지를 확인하세요."
+fi
+
+exit "$STATUS"
