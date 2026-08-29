@@ -1,0 +1,41 @@
+{
+  "version": "1.0",
+  "project": "YangYang AI",
+  "description": "YangYang AI shared story memory index",
+  "stories": {
+    "ai_family": {
+      "file": "memory/ai_family.md",
+      "name": "AI 가족 세계관",
+      "enabled": true
+    },
+    "independent_life": {
+      "file": "memory/independent_life.md",
+      "name": "양양이의 독립생활",
+      "enabled": true
+    },
+    "mars_exploration": {
+      "file": "memory/mars_exploration.md",
+      "name": "화성 탐험",
+      "enabled": true
+    },
+    "yangyang_city": {
+      "file": "memory/yangyang_city.md",
+      "name": "양양시 도시건설",
+      "enabled": true
+    }
+  },
+  "memory": {
+    "context_file": "memory/AI_CONTEXT.md",
+    "story_files": [
+      "memory/ai_family.md",
+      "memory/independent_life.md",
+      "memory/mars_exploration.md",
+      "memory/yangyang_city.md"
+    ]
+  },
+  "settings": {
+    "default_story": null,
+    "auto_load_context": true,
+    "auto_load_story_memory": true
+  }
+}
