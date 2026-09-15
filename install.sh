@@ -5,7 +5,8 @@
 #
 # Installs:
 #   - Termux base tools
-#   - Python / Node.js
+#   - Python 3.13 / pip / venv
+#   - Node.js / npm
 #   - Hermes Agent
 #   - OpenClaw
 #   - OpenCode
@@ -42,21 +43,49 @@ echo "[OK] Termux detected"
 echo
 
 # ----------------------------------------------------------
-# 기본 패키지
+# [1/7] 기본 패키지
 # ----------------------------------------------------------
 
 echo "=========================================="
 echo "[1/7] Termux 기본 패키지"
 echo "=========================================="
 
-pkg update -y || true
-pkg upgrade -y || true
+echo "[INFO] 패키지 목록 업데이트"
+
+if ! pkg update -y; then
+    echo
+    echo "[ERROR] pkg update 실패"
+    echo
+    echo "현재 Termux APT 상태를 먼저 확인해야 합니다."
+    echo "이 단계에서 중단합니다."
+    exit 1
+fi
+
+echo
+echo "[INFO] 기본 패키지 업그레이드"
+
+pkg upgrade -y || {
+    echo "[WARN] pkg upgrade 실패"
+    echo "설치를 계속 시도합니다."
+}
+
+echo
+echo "[INFO] TUR 저장소 추가"
+
+if ! pkg install -y tur-repo; then
+    echo "[ERROR] tur-repo 설치 실패"
+    exit 1
+fi
+
+echo
+echo "[INFO] 기본 도구 설치"
 
 pkg install -y \
     git \
     curl \
     wget \
     python \
+    python3.13 \
     nodejs \
     clang \
     make \
@@ -75,12 +104,19 @@ pkg install -y \
     openssh \
     tmux \
     htop \
-    tree
+    tree \
+    || {
+        echo
+        echo "[ERROR] 기본 패키지 설치 실패"
+        exit 1
+    }
 
+echo
+echo "[OK] 기본 패키지 설치 완료"
 echo
 
 # ----------------------------------------------------------
-# Android 저장소
+# [2/7] Android 저장소
 # ----------------------------------------------------------
 
 echo "=========================================="
@@ -89,48 +125,178 @@ echo "=========================================="
 
 termux-setup-storage 2>/dev/null || true
 
+echo "[OK] Android 저장소 권한 요청 완료"
 echo
 
 # ----------------------------------------------------------
-# Python
+# [3/7] Python
 # ----------------------------------------------------------
 
 echo "=========================================="
 echo "[3/7] Python"
 echo "=========================================="
 
+PYTHON="python3.13"
+
+if ! command -v "$PYTHON" >/dev/null 2>&1; then
+    echo "[ERROR] python3.13을 찾을 수 없습니다."
+    exit 1
+fi
+
+echo
+echo "기본 Python:"
 python --version || true
-python -m pip --version || true
 
-python -m pip install --upgrade pip setuptools wheel || true
+echo
+echo "Hermes Python:"
+"$PYTHON" --version
 
+echo
+echo "Python 3.13 pip:"
+"$PYTHON" -m pip --version || true
+
+echo
+echo "[INFO] Python 3.13 pip 업데이트"
+
+"$PYTHON" -m pip install --upgrade \
+    pip \
+    setuptools \
+    wheel \
+    || {
+        echo "[WARN] pip 업데이트 실패"
+        echo "Python 자체는 계속 사용합니다."
+    }
+
+echo
+echo "[OK] Python 3.13 준비 완료"
 echo
 
 # ----------------------------------------------------------
-# Hermes Agent
+# [4/7] Hermes Agent
 # ----------------------------------------------------------
 
 echo "=========================================="
 echo "[4/7] Hermes Agent"
 echo "=========================================="
 
+export PATH="$HOME/.local/bin:$PATH"
+
 if command -v hermes >/dev/null 2>&1; then
+
     echo "[OK] Hermes already installed"
+    hermes --version 2>/dev/null || true
+
 else
+
     echo "공식 Hermes 설치기를 실행합니다."
+    echo
 
     if curl -fsSL \
         https://hermes-agent.nousresearch.com/install.sh \
         | bash; then
 
+        echo
         echo "[OK] Hermes 설치 완료"
 
     else
 
-        echo "[WARN] Hermes 설치 실패"
-        echo "       나머지 설치는 계속합니다."
+        echo
+        echo "[WARN] Hermes 공식 설치기 실패"
+        echo
+        echo "Termux Python 3.13 환경을 확인합니다."
+        echo "나머지 설치는 계속합니다."
 
     fi
+
+fi
+
+export PATH="$HOME/.local/bin:$PATH"
+
+echo
+echo "Hermes 확인:"
+
+if command -v hermes >/dev/null 2>&1; then
+    hermes --version 2>/dev/null || true
+else
+    echo "[--] hermes 명령을 찾지 못했습니다."
+fi
+
+echo
+
+# ----------------------------------------------------------
+# [5/7] OpenClaw
+# ----------------------------------------------------------
+
+echo "=========================================="
+echo "[5/7] OpenClaw"
+echo "=========================================="
+
+echo
+echo "Node.js 확인:"
+
+NODE_OK=0
+
+if command -v node >/dev/null 2>&1; then
+
+    NODE_VERSION="$(node --version 2>/dev/null || true)"
+
+    echo "$NODE_VERSION"
+
+    NODE_MAJOR="$(printf '%s\n' "$NODE_VERSION" | sed 's/^v//' | cut -d. -f1)"
+
+    if [ -n "$NODE_MAJOR" ] && [ "$NODE_MAJOR" -ge 24 ]; then
+        NODE_OK=1
+        echo "[OK] Node.js 버전이 OpenClaw 설치 조건에 맞습니다."
+    else
+        echo "[WARN] Node.js 버전이 OpenClaw 최신 요구사항보다 낮을 수 있습니다."
+    fi
+
+else
+
+    echo "[ERROR] Node.js가 없습니다."
+
+fi
+
+echo
+
+if command -v openclaw >/dev/null 2>&1; then
+
+    echo "[OK] OpenClaw already installed"
+    openclaw --version 2>/dev/null || true
+
+else
+
+    if [ "$NODE_OK" -eq 1 ]; then
+
+        echo "공식 OpenClaw 설치기를 실행합니다."
+        echo "Termux/Android 환경에서는 일부 기능이 제한될 수 있습니다."
+        echo
+
+        if curl -fsSL \
+            --proto '=https' \
+            --tlsv1.2 \
+            https://openclaw.ai/install.sh \
+            | bash -s -- --no-prompt --no-onboard; then
+
+            echo
+            echo "[OK] OpenClaw 설치 완료"
+
+        else
+
+            echo
+            echo "[WARN] OpenClaw 설치 실패"
+            echo "Termux 환경에서 지원되지 않는 부분일 수 있습니다."
+            echo "나머지 설치는 계속합니다."
+
+        fi
+
+    else
+
+        echo "[WARN] Node.js 조건 미충족"
+        echo "OpenClaw 설치를 건너뜁니다."
+
+    fi
+
 fi
 
 export PATH="$HOME/.local/bin:$PATH"
@@ -138,69 +304,40 @@ export PATH="$HOME/.local/bin:$PATH"
 echo
 
 # ----------------------------------------------------------
-# OpenClaw
-# ----------------------------------------------------------
-
-echo "=========================================="
-echo "[5/7] OpenClaw"
-echo "=========================================="
-
-if command -v openclaw >/dev/null 2>&1; then
-
-    echo "[OK] OpenClaw already installed"
-
-else
-
-    echo "공식 OpenClaw 설치기를 실행합니다."
-    echo "Termux/Android는 공식 지원 범위와 차이가 있을 수 있습니다."
-
-    if curl -fsSL \
-        --proto '=https' \
-        --tlsv1.2 \
-        https://openclaw.ai/install.sh \
-        | bash -s -- --no-prompt --no-onboard; then
-
-        echo "[OK] OpenClaw 설치 완료"
-
-    else
-
-        echo "[WARN] OpenClaw 설치 실패"
-        echo "       Termux 환경에서 지원되지 않는 부분일 수 있습니다."
-        echo "       나머지 설치는 계속합니다."
-
-    fi
-fi
-
-echo
-
-# ----------------------------------------------------------
-# OpenCode
+# [6/7] OpenCode
 # ----------------------------------------------------------
 
 echo "=========================================="
 echo "[6/7] OpenCode"
 echo "=========================================="
 
+export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$PATH"
+
 if command -v opencode >/dev/null 2>&1; then
 
     echo "[OK] OpenCode already installed"
+    opencode --version 2>/dev/null || true
 
 else
 
     echo "공식 OpenCode 설치기를 실행합니다."
+    echo
 
     if curl -fsSL \
         https://opencode.ai/install \
         | bash; then
 
+        echo
         echo "[OK] OpenCode 설치 완료"
 
     else
 
+        echo
         echo "[WARN] OpenCode 설치 실패"
-        echo "       나머지 설치는 계속합니다."
+        echo "나머지 설치는 계속합니다."
 
     fi
+
 fi
 
 export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$PATH"
@@ -208,7 +345,7 @@ export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$PATH"
 echo
 
 # ----------------------------------------------------------
-# YangYang AI Memory
+# [7/7] YangYang AI Memory
 # ----------------------------------------------------------
 
 echo "=========================================="
@@ -234,45 +371,48 @@ download() {
     fi
 }
 
-# 공통 메모리
+echo
+echo "----- 공통 메모리 -----"
 
 download \
     "$REPO/memory/AI_CONTEXT.md" \
-    "$BASE/memory/AI_CONTEXT.md"
+    "$BASE/memory/AI_CONTEXT.md" || true
 
 download \
     "$REPO/memory/story_memory.json" \
-    "$BASE/memory/story_memory.json"
+    "$BASE/memory/story_memory.json" || true
 
-# 세계관
+echo
+echo "----- 세계관 -----"
 
 download \
     "$REPO/memory/ai_family.md" \
-    "$BASE/memory/ai_family.md"
+    "$BASE/memory/ai_family.md" || true
 
 download \
     "$REPO/memory/independent_life.md" \
-    "$BASE/memory/independent_life.md"
+    "$BASE/memory/independent_life.md" || true
 
 download \
     "$REPO/memory/mars_exploration.md" \
-    "$BASE/memory/mars_exploration.md"
+    "$BASE/memory/mars_exploration.md" || true
 
 download \
     "$REPO/memory/yangyang_city.md" \
-    "$BASE/memory/yangyang_city.md"
+    "$BASE/memory/yangyang_city.md" || true
 
-# AI 스크립트
+echo
+echo "----- AI 스크립트 -----"
 
 download \
     "$REPO/scripts/ai-start.sh" \
-    "$BASE/scripts/ai-start.sh"
+    "$BASE/scripts/ai-start.sh" || true
 
 download \
     "$REPO/scripts/memory-update.py" \
-    "$BASE/scripts/memory-update.py"
+    "$BASE/scripts/memory-update.py" || true
 
-chmod +x "$BASE/scripts/ai-start.sh"
+chmod +x "$BASE/scripts/ai-start.sh" 2>/dev/null || true
 
 echo
 
@@ -280,7 +420,7 @@ echo
 # PATH 저장
 # ----------------------------------------------------------
 
-if ! grep -q 'YangYang_AI' "$HOME/.bashrc" 2>/dev/null; then
+if ! grep -q 'YangYang AI' "$HOME/.bashrc" 2>/dev/null; then
 
     cat >> "$HOME/.bashrc" <<'EOF'
 
@@ -293,6 +433,7 @@ fi
 
 export YANGYANG_AI="$BASE"
 
+echo "[OK] YangYang AI PATH 설정 완료"
 echo
 
 # ----------------------------------------------------------
@@ -309,10 +450,15 @@ if [ -f "$BASE/memory/story_memory.json" ]; then
 import json
 import sys
 
-with open(sys.argv[1], encoding="utf-8") as f:
-    json.load(f)
+try:
+    with open(sys.argv[1], encoding="utf-8") as f:
+        json.load(f)
 
-print("JSON OK")
+    print("JSON OK")
+
+except Exception as e:
+    print("JSON ERROR:", e)
+    sys.exit(1)
 PY
     then
         echo "[OK] story_memory.json"
@@ -341,20 +487,56 @@ check_command() {
     NAME="$1"
 
     if command -v "$NAME" >/dev/null 2>&1; then
+
         echo "[OK] $NAME"
+
         "$NAME" --version 2>/dev/null | head -n 1 || true
+
     else
+
         echo "[--] $NAME"
+
     fi
 }
 
 check_command python
+check_command python3.13
 check_command node
 check_command npm
 check_command git
+check_command curl
 check_command hermes
 check_command openclaw
 check_command opencode
+
+echo
+
+# ----------------------------------------------------------
+# Python 버전 목록
+# ----------------------------------------------------------
+
+echo "=========================================="
+echo "Python 환경"
+echo "=========================================="
+
+echo "기본 Python:"
+python --version 2>/dev/null || true
+
+echo "Python 3.13:"
+python3.13 --version 2>/dev/null || true
+
+echo
+
+# ----------------------------------------------------------
+# Node.js / npm
+# ----------------------------------------------------------
+
+echo "=========================================="
+echo "Node.js 환경"
+echo "=========================================="
+
+node --version 2>/dev/null || true
+npm --version 2>/dev/null || true
 
 echo
 
@@ -367,11 +549,20 @@ echo "YangYang AI Memory"
 echo "=========================================="
 
 if [ -d "$BASE/memory" ]; then
-    find "$BASE/memory" -maxdepth 1 -type f -printf '%f\n' 2>/dev/null \
+
+    find "$BASE/memory" \
+        -maxdepth 1 \
+        -type f \
+        -printf '%f\n' 2>/dev/null \
         || ls -1 "$BASE/memory"
+
 fi
 
 echo
+
+# ----------------------------------------------------------
+# 완료
+# ----------------------------------------------------------
 
 echo "=========================================="
 echo "설치 완료"
@@ -386,6 +577,22 @@ echo "공통 AI 메모리:"
 echo "$BASE/memory/AI_CONTEXT.md"
 
 echo
+echo "Python 3.13:"
+echo "python3.13 --version"
+
+echo
+echo "Hermes:"
+echo "hermes --help"
+
+echo
+echo "OpenClaw:"
+echo "openclaw --help"
+
+echo
+echo "OpenCode:"
+echo "opencode --help"
+
+echo
 echo "새 터미널을 열거나:"
 echo
 echo "source ~/.bashrc"
@@ -396,11 +603,6 @@ echo
 echo "cat ~/YangYang_AI/memory/AI_CONTEXT.md"
 
 echo
-echo "AI 도구 확인:"
-echo
-echo "hermes --help"
-echo "openclaw --help"
-echo "opencode --help"
-
-echo
+echo "=========================================="
+echo " YangYang AI 설치 프로그램 종료"
 echo "=========================================="
