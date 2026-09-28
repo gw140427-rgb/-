@@ -95,6 +95,10 @@ download \
     "$REPO/memory/yangyang_city.md" \
     "$BASE/memory/yangyang_city.md"
 
+download \
+    "$REPO/memory/korean_independence.md" \
+    "$BASE/memory/korean_independence.md"
+
 # ----------------------------------------------------------
 # AI 스크립트 업데이트
 # ----------------------------------------------------------
