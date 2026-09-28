@@ -360,7 +360,11 @@ echo "----- 공통 메모리 -----"
 
 download \
     "$REPO/memory/AI_CONTEXT.md" \
-    "$BASE/memory/AI_CONTEXT.md" || true
+    "$BASE/memory/AI_CONTEXT.md"
+
+download \
+    "$REPO/memory/AI_INSTRUCTIONS.md" \
+    "$BASE/memory/AI_INSTRUCTIONS.md" || true || true
 
 download \
     "$REPO/memory/story_memory.json" \
