@@ -17,6 +17,14 @@ echo "===== 공식 AI 컨텍스트 ====="
 cat "$MEMORY/AI_CONTEXT.md"
 
 echo
+echo "===== AI에게 전달할 안내 ====="
+if [ -f "$MEMORY/AI_INSTRUCTIONS.md" ]; then
+    cat "$MEMORY/AI_INSTRUCTIONS.md"
+else
+    echo "AI_INSTRUCTIONS.md가 없습니다."
+fi
+
+echo
 echo "===== 구조화된 메모리 ====="
 
 if [ -f "$MEMORY/story_memory.json" ]; then
