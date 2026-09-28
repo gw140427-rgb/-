@@ -1,5 +1,5 @@
 {
-  "version": "1.0",
+  "version": "1.1",
   "project": "YangYang AI",
   "description": "YangYang AI shared story memory index",
   "stories": {
@@ -22,6 +22,11 @@
       "file": "memory/yangyang_city.md",
       "name": "양양시 도시건설",
       "enabled": true
+    },
+    "korean_independence": {
+      "file": "memory/korean_independence.md",
+      "name": "대한독립운동 이야기",
+      "enabled": true
     }
   },
   "memory": {
@@ -30,7 +35,8 @@
       "memory/ai_family.md",
       "memory/independent_life.md",
       "memory/mars_exploration.md",
-      "memory/yangyang_city.md"
+      "memory/yangyang_city.md",
+      "memory/korean_independence.md"
     ]
   },
   "settings": {
