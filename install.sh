@@ -172,7 +172,7 @@ echo "[OK] Python 3.13 준비 완료"
 echo
 
 # ----------------------------------------------------------
-# [4/7] Hermes Agent
+# [4/7] Hermes Agent (Termux対応)
 # ----------------------------------------------------------
 
 echo "=========================================="
@@ -182,43 +182,27 @@ echo "=========================================="
 export PATH="$HOME/.local/bin:$PATH"
 
 if command -v hermes >/dev/null 2>&1; then
-
     echo "[OK] Hermes already installed"
     hermes --version 2>/dev/null || true
-
 else
-
-    echo "공식 Hermes 설치기를 실행합니다."
-    echo
-
-    if curl -fsSL \
-        https://hermes-agent.nousresearch.com/install.sh \
-        | bash; then
-
-        echo
-        echo "[OK] Hermes 설치 완료"
-
+    echo "[INFO] Termux 패키지 방식으로 Hermes 설치를 시도합니다."
+    if pkg install -y hermes-agent; then
+        echo "[OK] hermes-agent 패키지 설치 완료"
     else
-
-        echo
-        echo "[WARN] Hermes 공식 설치기 실패"
-        echo
-        echo "Termux Python 3.13 환경을 확인합니다."
-        echo "나머지 설치는 계속합니다."
-
+        echo "[WARN] 현재 Termux 저장소에서 hermes-agent 설치가 되지 않았습니다."
+        echo "[INFO] 일반 Linux용 설치기를 Termux에서 강제로 실행하지 않습니다."
+        echo "필요하면 Ubuntu/proot 환경에서 공식 설치 방법을 별도로 사용하세요."
     fi
-
 fi
 
-export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.local/bin:$PREFIX/bin:$PATH"
 
 echo
 echo "Hermes 확인:"
-
 if command -v hermes >/dev/null 2>&1; then
     hermes --version 2>/dev/null || true
 else
-    echo "[--] hermes 명령을 찾지 못했습니다."
+    echo "[--] Hermes 미설치 (Termux 패키지 지원 상태 확인 필요)"
 fi
 
 echo
