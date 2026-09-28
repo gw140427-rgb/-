@@ -172,26 +172,62 @@ echo "[OK] Python 3.13 준비 완료"
 echo
 
 # ----------------------------------------------------------
-# [4/7] Hermes Agent (Termux対応)
+# [4/7] Hermes Agent (공식 Termux APT)
 # ----------------------------------------------------------
 
 echo "=========================================="
 echo "[4/7] Hermes Agent"
 echo "=========================================="
 
-export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.local/bin:$PREFIX/bin:$PATH"
 
 if command -v hermes >/dev/null 2>&1; then
     echo "[OK] Hermes already installed"
     hermes --version 2>/dev/null || true
 else
-    echo "[INFO] Termux 패키지 방식으로 Hermes 설치를 시도합니다."
-    if pkg install -y hermes-agent; then
-        echo "[OK] hermes-agent 패키지 설치 완료"
+    echo "[INFO] 공식 Termux APT 저장소를 설정합니다."
+    echo "[WARN] 공식 문서상 stable 채널은 현재 복구 중이므로 canary를 사용합니다."
+    echo "[INFO] 기존 Hermes 설정과 OpenClaw/Codex 데이터는 삭제하지 않습니다."
+
+    if ! pkg install -y curl gnupg; then
+        echo "[WARN] curl/gnupg 설치 실패. Hermes 설치를 건너뜁니다."
     else
-        echo "[WARN] 현재 Termux 저장소에서 hermes-agent 설치가 되지 않았습니다."
-        echo "[INFO] 일반 Linux용 설치기를 Termux에서 강제로 실행하지 않습니다."
-        echo "필요하면 Ubuntu/proot 환경에서 공식 설치 방법을 별도로 사용하세요."
+        KEYRING="$PREFIX/etc/apt/keyrings/hermes-agent.asc"
+        SOURCES="$PREFIX/etc/apt/sources.list.d/hermes-agent.list"
+        mkdir -p "$PREFIX/etc/apt/keyrings" "$PREFIX/etc/apt/sources.list.d"
+
+        if curl -fsSL "https://hermes-assets.nousresearch.com/releases/termux/canary/key.asc" -o "$KEYRING"; then
+            # Primary public-key fingerprint (not the signing subkey fingerprint)
+            ACTUAL_FPR="$(gpg --batch --with-colons --show-keys "$KEYRING" 2>/dev/null | awk -F: '
+                $1=="pub" { want=1; next }
+                want && $1=="fpr" { print toupper($10); exit }
+            ')"
+            EXPECTED_FPR="C572B5FDD1A29CCFA9A912B6840B0848E139156D"
+
+            if [ "$ACTUAL_FPR" = "$EXPECTED_FPR" ]; then
+                echo "[OK] Hermes 저장소 서명 키 확인 완료"
+                printf '%s\n' \
+                    "deb [signed-by=$KEYRING] https://hermes-assets.nousresearch.com/releases/termux/canary hermes-canary main" \
+                    > "$SOURCES"
+
+                if pkg update; then
+                    if pkg install -y hermes-agent; then
+                        echo "[OK] Hermes 패키지 설치 완료"
+                    else
+                        echo "[WARN] hermes-agent 설치 실패. 공식 패키지 상태를 확인하세요."
+                    fi
+                else
+                    echo "[WARN] 저장소 목록 갱신 실패. Hermes 설치를 건너뜁니다."
+                fi
+            else
+                echo "[ERROR] Hermes 키 지문 불일치. 안전을 위해 설치를 중단합니다."
+                echo "기대값: $EXPECTED_FPR"
+                echo "실제값: ${ACTUAL_FPR:-확인 실패}"
+                rm -f "$KEYRING"
+            fi
+        else
+            echo "[WARN] Hermes 저장소 키 다운로드 실패. 설치를 건너뜁니다."
+        fi
     fi
 fi
 
@@ -202,12 +238,11 @@ echo "Hermes 확인:"
 if command -v hermes >/dev/null 2>&1; then
     hermes --version 2>/dev/null || true
 else
-    echo "[--] Hermes 미설치 (Termux 패키지 지원 상태 확인 필요)"
+    echo "[--] Hermes 미설치 (Termux 공식 패키지 상태 확인 필요)"
 fi
 
 echo
 
-# ----------------------------------------------------------
 # [5/7] OpenClaw
 # ----------------------------------------------------------
 
