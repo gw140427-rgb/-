@@ -67,6 +67,10 @@ download \
     "$BASE/memory/AI_CONTEXT.md"
 
 download \
+    "$REPO/memory/AI_INSTRUCTIONS.md" \
+    "$BASE/memory/AI_INSTRUCTIONS.md"
+
+download \
     "$REPO/memory/story_memory.json" \
     "$BASE/memory/story_memory.json"
 
