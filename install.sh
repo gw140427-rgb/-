@@ -640,6 +640,15 @@ echo
 echo "cat ~/YangYang_AI/memory/AI_CONTEXT.md"
 
 echo
+echo "===== YangYang AI 명령어 목록 ====="
+echo "공통 메모리 보기: cat ~/YangYang_AI/memory/AI_CONTEXT.md"
+echo "AI 시작/메모리 출력: bash ~/YangYang_AI/scripts/ai-start.sh"
+echo "AI 통합 관제실: bash ~/YangYang_AI/scripts/ai-control.sh"
+echo "안전한 캐시 정리: bash ~/YangYang_AI/scripts/ai-clean.sh"
+echo "메모리 파일 목록: ls -lah ~/YangYang_AI/memory"
+echo "스크립트 목록: ls -lah ~/YangYang_AI/scripts"
+
+echo
 echo "=========================================="
 echo " YangYang AI 설치 프로그램 종료"
 echo "=========================================="
