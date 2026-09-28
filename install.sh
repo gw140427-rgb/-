@@ -385,6 +385,10 @@ download \
     "$REPO/memory/yangyang_city.md" \
     "$BASE/memory/yangyang_city.md" || true
 
+download \
+    "$REPO/memory/korean_independence.md" \
+    "$BASE/memory/korean_independence.md" || true
+
 echo
 echo "----- AI 스크립트 -----"
 
