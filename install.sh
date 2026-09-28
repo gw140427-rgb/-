@@ -436,10 +436,15 @@ download \
     "$BASE/scripts/ai-start.sh" || true
 
 download \
+    "$REPO/scripts/ai-control.sh" \
+    "$BASE/scripts/ai-control.sh" || true
+
+download \
     "$REPO/scripts/memory-update.py" \
     "$BASE/scripts/memory-update.py" || true
 
 chmod +x "$BASE/scripts/ai-start.sh" 2>/dev/null || true
+chmod +x "$BASE/scripts/ai-control.sh" 2>/dev/null || true
 
 echo
 
