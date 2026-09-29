@@ -187,9 +187,12 @@ elif [ "$INSTALL_CHOICE" = "3" ]; then
         proot-distro install debian || { echo "[ERROR] Debian 설치 실패"; exit 1; }
     fi
     echo
-    echo "[INFO] Debian 진입 명령: proot-distro login debian"
-    echo "[INFO] Debian 안에서 AI 설치: bash debian-install.sh"
-    exit 0
+    echo "[OK] Debian 설치 확인 완료"
+    echo "[INFO] Debian으로 진입합니다. 나가려면 exit 입력."
+    echo "[INFO] Debian 안에서 AI 설치기를 실행하려면:"
+    echo "curl -fsSL https://raw.githubusercontent.com/gw140427-rgb/-/main/debian-install.sh -o debian-install.sh && bash debian-install.sh"
+    proot-distro login debian
+    exit $?
 else
     echo "취소했습니다."
     exit 0
