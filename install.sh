@@ -43,6 +43,68 @@ echo "[OK] Termux detected"
 echo
 
 # ----------------------------------------------------------
+# YangYang AI: 메뉴 / 로그 / 백업 / 진단
+# ----------------------------------------------------------
+LOG_DIR="$HOME/YangYang_AI/logs"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/install-$(date +%Y%m%d-%H%M%S).log"
+exec > >(tee -a "$LOG_FILE") 2>&1
+
+diagnose_error() {
+    code=$?
+    if [ "$code" -ne 0 ]; then
+        echo
+        echo "[DIAG] 설치 중 오류가 발생했습니다 (종료 코드: $code)"
+        echo "[DIAG] 로그: $LOG_FILE"
+        echo "[DIAG] 확인 순서: 인터넷 연결 → pkg update → 저장 공간 → 해당 명령의 오류"
+        echo "[DIAG] 설정/메모리는 자동 삭제하지 않았습니다."
+    fi
+}
+trap diagnose_error EXIT
+
+show_status() {
+    echo
+    echo "========== AI 통합 상태 검사 =========="
+    for name in python python3.13 node npm git hermes openclaw opencode; do
+        if command -v "$name" >/dev/null 2>&1; then
+            printf '[OK] %-12s ' "$name"
+            "$name" --version 2>/dev/null | head -n 1 || true
+        else
+            echo "[--] $name 미설치"
+        fi
+    done
+    echo "메모리: $BASE/memory"
+    [ -d "$BASE/memory" ] && ls -1 "$BASE/memory" || echo "아직 없음"
+    echo "로그: $LOG_FILE"
+    echo "======================================="
+}
+
+echo "========== YangYang AI 메뉴 =========="
+echo "1) 전체 설치"
+echo "2) AI 통합 상태 검사만"
+echo "3) 취소"
+read -r -p "선택 [1-3]: " INSTALL_CHOICE
+case "$INSTALL_CHOICE" in
+    1) ;;
+    2) show_status; exit 0 ;;
+    *) echo "취소했습니다."; exit 0 ;;
+esac
+
+backup_existing() {
+    stamp="$(date +%Y%m%d-%H%M%S)"
+    dest="$HOME/YangYang_AI_backup_$stamp"
+    mkdir -p "$dest"
+    for item in "$HOME/YangYang_AI" "$HOME/.bashrc" "$HOME/.hermes" "$HOME/.openclaw" "$HOME/.config/opencode"; do
+        if [ -e "$item" ]; then
+            cp -a "$item" "$dest/" 2>/dev/null || echo "[WARN] 백업 일부 실패: $item"
+        fi
+    done
+    echo "[BACKUP] 기존 데이터 백업 위치: $dest"
+}
+backup_existing
+echo
+
+# ----------------------------------------------------------
 # [1/7] 기본 패키지
 # ----------------------------------------------------------
 
