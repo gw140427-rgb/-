@@ -1,8 +1,8 @@
 #!/data/data/com.termux/files/usr/bin/bash
 
 # ==========================================================
-# YangYang AI - Update Only
-# 전체 재설치 없이 YangYang AI 파일만 업데이트
+# YangYang AI - Safe Updater
+# YangYang 파일 업데이트 + 선택적 Hermes 업데이트
 # ==========================================================
 
 set -u
@@ -16,115 +16,59 @@ echo "       YangYang AI Updater"
 echo "=========================================="
 echo
 
-# ----------------------------------------------------------
 # Termux 확인
-# ----------------------------------------------------------
-
 if [ -z "${PREFIX:-}" ]; then
     echo "[ERROR] Termux에서 실행해야 합니다."
+    echo "[INFO] Debian/PRoot에서는 실행하지 마세요."
     exit 1
 fi
-
 echo "[OK] Termux detected"
 echo
 
-# ----------------------------------------------------------
-# 기본 디렉터리
-# ----------------------------------------------------------
+# 필수 도구 확인
+for CMD in curl python; do
+    if ! command -v "$CMD" >/dev/null 2>&1; then
+        echo "[ERROR] 필수 명령어가 없습니다: $CMD"
+        exit 1
+    fi
+done
 
-mkdir -p "$BASE/memory"
-mkdir -p "$BASE/scripts"
+mkdir -p "$BASE/memory" "$BASE/scripts"
 
-# ----------------------------------------------------------
-# 다운로드 함수
-# ----------------------------------------------------------
-
+# 안전한 다운로드: 성공한 경우에만 기존 파일 교체
 download() {
     URL="$1"
     FILE="$2"
+    TMP="$FILE.tmp"
 
     echo "[UPDATE] $(basename "$FILE")"
-
-    if curl -fL "$URL" -o "$FILE.tmp"; then
-        mv "$FILE.tmp" "$FILE"
-        echo "[OK]"
+    if curl -fsSL "$URL" -o "$TMP"; then
+        mv "$TMP" "$FILE"
+        echo "[OK] 저장 완료"
     else
-        rm -f "$FILE.tmp"
-        echo "[WARN] 업데이트 실패: $(basename "$FILE")"
+        rm -f "$TMP"
+        echo "[WARN] 다운로드 실패: $(basename "$FILE") (기존 파일 유지)"
+        return 1
     fi
 }
 
-# ----------------------------------------------------------
-# 메모리 업데이트
-# ----------------------------------------------------------
-
+FAILED=0
 echo "=========================================="
-echo "메모리 업데이트"
+echo "YangYang 메모리 업데이트"
 echo "=========================================="
 
-download \
-    "$REPO/memory/AI_CONTEXT.md" \
-    "$BASE/memory/AI_CONTEXT.md"
-
-download \
-    "$REPO/memory/AI_INSTRUCTIONS.md" \
-    "$BASE/memory/AI_INSTRUCTIONS.md"
-
-download \
-    "$REPO/memory/story_memory.json" \
-    "$BASE/memory/story_memory.json"
-
-# ----------------------------------------------------------
-# 세계관 업데이트
-# ----------------------------------------------------------
-
-echo
-echo "=========================================="
-echo "세계관 업데이트"
-echo "=========================================="
-
-download \
-    "$REPO/memory/ai_family.md" \
-    "$BASE/memory/ai_family.md"
-
-download \
-    "$REPO/memory/independent_life.md" \
-    "$BASE/memory/independent_life.md"
-
-download \
-    "$REPO/memory/mars_exploration.md" \
-    "$BASE/memory/mars_exploration.md"
-
-download \
-    "$REPO/memory/yangyang_city.md" \
-    "$BASE/memory/yangyang_city.md"
-
-download \
-    "$REPO/memory/korean_independence.md" \
-    "$BASE/memory/korean_independence.md"
-
-# ----------------------------------------------------------
-# AI 스크립트 업데이트
-# ----------------------------------------------------------
+for NAME in AI_CONTEXT.md AI_INSTRUCTIONS.md story_memory.json ai_family.md independent_life.md mars_exploration.md yangyang_city.md korean_independence.md; do
+    download "$REPO/memory/$NAME" "$BASE/memory/$NAME" || FAILED=1
+done
 
 echo
 echo "=========================================="
 echo "AI 스크립트 업데이트"
 echo "=========================================="
 
-download \
-    "$REPO/scripts/ai-start.sh" \
-    "$BASE/scripts/ai-start.sh"
-
-download \
-    "$REPO/scripts/memory-update.py" \
-    "$BASE/scripts/memory-update.py"
-
-chmod +x "$BASE/scripts/ai-start.sh" 2>/dev/null || true
-
-# ----------------------------------------------------------
-# JSON 검사
-# ----------------------------------------------------------
+download "$REPO/scripts/ai-start.sh" "$BASE/scripts/ai-start.sh" || FAILED=1
+download "$REPO/scripts/memory-update.py" "$BASE/scripts/memory-update.py" || FAILED=1
+[ ! -f "$BASE/scripts/ai-start.sh" ] || chmod +x "$BASE/scripts/ai-start.sh"
 
 echo
 echo "=========================================="
@@ -135,63 +79,71 @@ if [ -f "$BASE/memory/story_memory.json" ]; then
     if python - "$BASE/memory/story_memory.json" <<'PY'
 import json
 import sys
-
 try:
     with open(sys.argv[1], encoding="utf-8") as f:
         json.load(f)
-
     print("[OK] story_memory.json")
-
 except Exception as e:
-    print("[ERROR] JSON 오류:", e)
+    print("[ERROR] story_memory.json:", e)
     sys.exit(1)
 PY
     then
         :
     else
-        echo "[WARN] JSON 파일을 확인하세요."
+        echo "[WARN] JSON 형식을 확인하세요. 파일은 자동 삭제하지 않았습니다."
+        FAILED=1
     fi
+else
+    echo "[--] story_memory.json 없음"
 fi
-
-# ----------------------------------------------------------
-# 설치된 프로그램 확인
-# ----------------------------------------------------------
 
 echo
 echo "=========================================="
 echo "설치된 AI 프로그램 확인"
 echo "=========================================="
-
-for CMD in hermes openclaw opencode; do
+for CMD in hermes openclaw opencode codex; do
     if command -v "$CMD" >/dev/null 2>&1; then
-        echo "[OK] $CMD"
+        echo "[OK] $CMD: $(command -v "$CMD")"
     else
-        echo "[--] $CMD 미설치"
+        echo "[--] $CMD 미발견 (이 환경의 PATH 기준)"
     fi
 done
 
-# ----------------------------------------------------------
-# 완료
-# ----------------------------------------------------------
+echo
+echo "=========================================="
+echo "Hermes 업데이트 (선택)"
+echo "=========================================="
+if command -v hermes >/dev/null 2>&1; then
+    printf "Hermes를 지금 업데이트할까? [y/N]: "
+    read -r ANSWER
+    case "$ANSWER" in
+        y|Y|yes|YES)
+            echo "[INFO] Hermes 자체 업데이트를 실행합니다."
+            echo "[INFO] 실패하면 출력 내용을 확인하고 재설치하지 마세요."
+            hermes update || {
+                echo "[WARN] Hermes 업데이트 실패. 설정/데이터는 이 스크립트에서 삭제하지 않았습니다."
+                FAILED=1
+            }
+            ;;
+        *)
+            echo "[SKIP] Hermes 업데이트 건너뜀"
+            ;;
+    esac
+else
+    echo "[SKIP] Hermes 명령어가 이 Termux 환경의 PATH에서 발견되지 않았습니다."
+fi
 
 echo
 echo "=========================================="
-echo "       업데이트 완료"
+if [ "$FAILED" -eq 0 ]; then
+    echo "       업데이트 작업 종료"
+else
+    echo "       일부 작업 확인 필요"
+fi
 echo "=========================================="
-
+echo "YangYang AI: $BASE"
+echo "메모리: $BASE/memory"
+echo "스크립트: $BASE/scripts"
 echo
-echo "YangYang AI:"
-echo "$BASE"
-
-echo
-echo "메모리:"
-echo "$BASE/memory"
-
-echo
-echo "스크립트:"
-echo "$BASE/scripts"
-
-echo
-echo "※ 이 업데이트기는 Hermes/OpenClaw/OpenCode를"
-echo "   재설치하지 않습니다."
-echo
+echo "※ 이 스크립트는 OpenClaw/OpenCode/Codex를 재설치하지 않습니다."
+echo "※ Hermes 업데이트는 사용자가 y를 선택한 경우에만 실행됩니다."
