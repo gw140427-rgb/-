@@ -41,22 +41,59 @@ show_status() {
 echo
 echo "========== Debian 전용 메뉴 =========="
 echo "1) 기본 도구 + YangYang 메모리"
-echo "2) 상태 검사"
-echo "3) 취소"
+echo "2) Hermes Agent 설치"
+echo "3) OpenClaw 설치"
+echo "4) Codex 설치"
+echo "5) OpenCode 설치"
+echo "6) 상태 검사"
+echo "7) 취소"
 if [ -r /dev/tty ]; then
-    read -r -p "선택 [1-3]: " CHOICE </dev/tty
+    read -r -p "선택 [1-7]: " CHOICE </dev/tty
 else
     echo "[ERROR] 터미널 입력을 사용할 수 없습니다."
     exit 1
 fi
 
 case "$CHOICE" in
-    1) ;;
-    2) show_status; exit 0 ;;
+    1|2|3|4|5) ;;
+    6) show_status; exit 0 ;;
     *) echo "취소했습니다."; exit 0 ;;
 esac
 
 export DEBIAN_FRONTEND=noninteractive
+ 
+# Individual AI tool installers
+if [ "$CHOICE" != "1" ]; then
+    case "$CHOICE" in
+        2)
+            echo "[INFO] Hermes Agent 설치기를 실행합니다."
+            echo "[WARN] PRoot Debian에서는 일부 기능/의존성이 제한될 수 있습니다."
+            curl -fsSL https://raw.githubusercontent.com/NousResearch/hermes-agent/main/scripts/install.sh | bash
+            ;;
+        3)
+            echo "[INFO] OpenClaw 공식 설치기를 실행합니다."
+            curl -fsSL --proto '=https' --tlsv1.2 https://openclaw.ai/install.sh | bash -s -- --no-prompt --no-onboard
+            ;;
+        4)
+            echo "[INFO] Codex CLI 설치를 위해 Node.js/npm이 필요합니다."
+            if ! command -v npm >/dev/null 2>&1; then
+                apt-get update && apt-get install -y nodejs npm
+            fi
+            npm install -g @openai/codex
+            ;;
+        5)
+            echo "[INFO] OpenCode 공식 설치기를 실행합니다."
+            curl -fsSL https://opencode.ai/install | bash -s -- --no-modify-path
+            ;;
+    esac
+    echo
+    echo "[INFO] 설치 명령 실행 후 상태 검사:"
+    for name in hermes openclaw codex opencode; do
+        command -v "$name" >/dev/null 2>&1 && echo "[OK] $name" || echo "[--] $name 명령을 찾지 못함"
+    done
+    exit 0
+fi
+
 echo
 echo "[INFO] apt 패키지 목록 업데이트"
 apt-get update || { echo "[ERROR] apt-get update 실패"; exit 1; }
