@@ -181,18 +181,20 @@ elif [ "$INSTALL_CHOICE" = "3" ]; then
     if ! command -v proot-distro >/dev/null 2>&1; then
         pkg update -y && pkg install -y proot-distro || { echo "[ERROR] proot-distro 설치 실패"; exit 1; }
     fi
-    if proot-distro login debian >/dev/null 2>&1; then
-        echo "[OK] Debian이 이미 설치되어 있습니다."
+    # Check installation state without launching an interactive login shell.
+    if proot-distro list --installed 2>/dev/null | grep -Eq '(^|[[:space:]])debian([[:space:]]|$)'; then
+        echo "[OK] 기존 Debian이 설치되어 있습니다. 재설치하지 않습니다."
     else
+        echo "[INFO] Debian을 처음 설치합니다."
         proot-distro install debian || { echo "[ERROR] Debian 설치 실패"; exit 1; }
     fi
     echo
     echo "[OK] Debian 설치 확인 완료"
-    echo "[INFO] Debian으로 진입합니다. 나가려면 exit 입력."
-    echo "[INFO] Debian 안에서 AI 설치기를 실행하려면:"
+    echo "[INFO] 지금 Debian 셸을 시작합니다. 종료하려면 exit 입력."
+    echo "[INFO] Debian 안에서 AI 설치기는 아래 명령으로 실행할 수 있습니다:"
     echo "curl -fsSL https://raw.githubusercontent.com/gw140427-rgb/-/main/debian-install.sh -o debian-install.sh && bash debian-install.sh"
-    proot-distro login debian
-    exit $?
+    echo
+    exec proot-distro login debian
 else
     echo "취소했습니다."
     exit 0
