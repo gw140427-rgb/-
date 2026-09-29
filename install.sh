@@ -177,7 +177,7 @@ elif [ "$INSTALL_CHOICE" = "2" ]; then
     show_status
     exit 0
 elif [ "$INSTALL_CHOICE" = "4" ]; then
-    if [ -d "$PREFIX/var/lib/proot-distro/installed-rootfs/debian" ]; then
+    if [ -d "$PREFIX/var/lib/proot-distro/containers/debian/rootfs" ] || [ -d "$PREFIX/var/lib/proot-distro/installed-rootfs/debian" ]; then
         echo "[INFO] 기존 Debian을 실행합니다."
         exec proot-distro login debian
     else
@@ -191,7 +191,7 @@ elif [ "$INSTALL_CHOICE" = "3" ]; then
         pkg update -y && pkg install -y proot-distro || { echo "[ERROR] proot-distro 설치 실패"; exit 1; }
     fi
     # Check installation state without launching an interactive login shell.
-    if [ -d "$PREFIX/var/lib/proot-distro/installed-rootfs/debian" ]; then
+    if [ -d "$PREFIX/var/lib/proot-distro/containers/debian/rootfs" ] || [ -d "$PREFIX/var/lib/proot-distro/installed-rootfs/debian" ]; then
         echo "[OK] 기존 Debian이 설치되어 있습니다. 재설치하지 않습니다."
     else
         echo "[INFO] Debian을 처음 설치합니다."
