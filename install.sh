@@ -34,13 +34,70 @@ echo
 # Termux 확인
 # ----------------------------------------------------------
 
-if [ -z "${PREFIX:-}" ]; then
-    echo "[ERROR] 이 설치기는 Termux용입니다."
+if [ -n "${PREFIX:-}" ]; then
+    PLATFORM="termux"
+    echo "[OK] Termux detected"
+elif [ -f /etc/alpine-release ] && command -v apk >/dev/null 2>&1; then
+    PLATFORM="podroid-alpine"
+    echo "[OK] Podroid / Alpine Linux detected"
+else
+    echo "[ERROR] 지원 환경을 찾지 못했습니다. Termux 또는 Podroid(Alpine)에서 실행하세요."
     exit 1
 fi
-
-echo "[OK] Termux detected"
 echo
+
+# Podroid는 Alpine Linux VM이므로 Termux 전용 패키지/경로를 사용하지 않습니다.
+if [ "$PLATFORM" = "podroid-alpine" ]; then
+    echo "========== Podroid 설치 모드 =========="
+    echo "1) Alpine 기본 도구 + YangYang AI 메모리"
+    echo "2) 상태 검사만"
+    echo "3) 취소"
+    read -r -p "선택 [1-3]: " PODROID_CHOICE
+    case "$PODROID_CHOICE" in
+        1) ;;
+        2)
+            for name in python3 node npm git curl bash; do
+                command -v "$name" >/dev/null 2>&1 && echo "[OK] $name" || echo "[--] $name 미설치"
+            done
+            exit 0
+            ;;
+        *) echo "취소했습니다."; exit 0 ;;
+    esac
+
+    apk update || { echo "[ERROR] apk update 실패"; exit 1; }
+    apk add bash curl git python3 py3-pip nodejs npm ca-certificates coreutils findutils grep sed tar gzip || {
+        echo "[ERROR] Alpine 기본 도구 설치 실패"
+        exit 1
+    }
+
+    mkdir -p "$BASE/memory" "$BASE/scripts" "$BASE/logs"
+    download_podroid() {
+        url="$1"; file="$2"
+        echo "[DOWNLOAD] $file"
+        curl -fL "$url" -o "$file" || echo "[WARN] 다운로드 실패: $file"
+    }
+    download_podroid "$REPO/memory/AI_CONTEXT.md" "$BASE/memory/AI_CONTEXT.md"
+    download_podroid "$REPO/memory/AI_INSTRUCTIONS.md" "$BASE/memory/AI_INSTRUCTIONS.md"
+    download_podroid "$REPO/memory/story_memory.json" "$BASE/memory/story_memory.json"
+    download_podroid "$REPO/memory/ai_family.md" "$BASE/memory/ai_family.md"
+    download_podroid "$REPO/memory/independent_life.md" "$BASE/memory/independent_life.md"
+    download_podroid "$REPO/memory/mars_exploration.md" "$BASE/memory/mars_exploration.md"
+    download_podroid "$REPO/memory/yangyang_city.md" "$BASE/memory/yangyang_city.md"
+    download_podroid "$REPO/memory/korean_independence.md" "$BASE/memory/korean_independence.md"
+    download_podroid "$REPO/scripts/ai-start.sh" "$BASE/scripts/ai-start.sh"
+    download_podroid "$REPO/scripts/ai-control.sh" "$BASE/scripts/ai-control.sh"
+    download_podroid "$REPO/scripts/ai-clean.sh" "$BASE/scripts/ai-clean.sh"
+    download_podroid "$REPO/scripts/memory-update.py" "$BASE/scripts/memory-update.py"
+    chmod +x "$BASE"/scripts/*.sh 2>/dev/null || true
+    echo
+    echo "[OK] Podroid 기본 환경 + 메모리 준비 완료"
+    echo "Python: $(python3 --version 2>/dev/null || true)"
+    echo "Node: $(node --version 2>/dev/null || true)"
+    echo "설치 위치: $BASE"
+    echo "[INFO] Hermes의 Termux APT 설치 단계는 Podroid에서 실행하지 않았습니다."
+    echo "[INFO] OpenClaw/OpenCode는 별도 호환성 확인 후 추가 설치해야 합니다."
+    exit 0
+fi
 
 # ----------------------------------------------------------
 # YangYang AI: 메뉴 / 로그 / 백업 / 진단
