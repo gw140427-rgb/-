@@ -49,18 +49,21 @@ echo
 # Podroid는 Alpine Linux VM이므로 Termux 전용 패키지/경로를 사용하지 않습니다.
 if [ "$PLATFORM" = "podroid-alpine" ]; then
     echo "========== Podroid 설치 모드 =========="
-    echo "1) Alpine 기본 도구 + YangYang AI 메모리"
-    echo "2) 상태 검사만"
-    echo "3) 취소"
-    read -r -p "선택 [1-3]: " PODROID_CHOICE
+    echo "1) 기본 도구 + 메모리"
+    echo "2) Hermes Agent 설치 시도"
+    echo "3) OpenClaw 설치"
+    echo "4) OpenCode 설치"
+    echo "5) 상태 검사"
+    echo "6) 취소"
+    read -r -p "선택 [1-6]: " PODROID_CHOICE
     case "$PODROID_CHOICE" in
-        1) ;;
-        2)
-            for name in python3 node npm git curl bash; do
-                command -v "$name" >/dev/null 2>&1 && echo "[OK] $name" || echo "[--] $name 미설치"
+        1|2|3|4) ;;
+        5)
+            echo "OS: $(cat /etc/alpine-release 2>/dev/null || echo Alpine)"
+            for name in python3 node npm git curl bash hermes openclaw opencode; do
+                command -v "$name" >/dev/null 2>&1 && { printf '[OK] %-10s ' "$name"; "$name" --version 2>/dev/null | head -n 1 || true; } || echo "[--] $name 미설치"
             done
-            exit 0
-            ;;
+            exit 0 ;;
         *) echo "취소했습니다."; exit 0 ;;
     esac
 
@@ -69,6 +72,22 @@ if [ "$PLATFORM" = "podroid-alpine" ]; then
         echo "[ERROR] Alpine 기본 도구 설치 실패"
         exit 1
     }
+
+    if [ "$PODROID_CHOICE" = "2" ]; then
+        echo "[INFO] Hermes 설치는 Alpine 호환성을 확인하며 시도합니다."
+        apk add py3-virtualenv || true
+        python3 -m venv "$HOME/.venvs/hermes" || { echo "[ERROR] venv 생성 실패"; exit 1; }
+        "$HOME/.venvs/hermes/bin/pip" install --upgrade pip
+        "$HOME/.venvs/hermes/bin/pip" install hermes-agent || { echo "[WARN] Hermes 패키지 설치 실패/비호환"; exit 1; }
+        echo 'export PATH="$HOME/.venvs/hermes/bin:$PATH"' >> "$HOME/.profile"
+        echo "[OK] Hermes 설치 시도 완료"; exit 0
+    elif [ "$PODROID_CHOICE" = "3" ]; then
+        npm install -g openclaw || { echo "[ERROR] OpenClaw npm 설치 실패"; exit 1; }
+        openclaw --version || true; exit 0
+    elif [ "$PODROID_CHOICE" = "4" ]; then
+        curl -fsSL https://opencode.ai/install | bash || { echo "[ERROR] OpenCode 설치 실패"; exit 1; }
+        echo "[INFO] OpenCode 설치기 실행 완료. 바이너리 호환성은 별도 확인 필요."; exit 0
+    fi
 
     mkdir -p "$BASE/memory" "$BASE/scripts" "$BASE/logs"
     download_podroid() {
