@@ -1,4 +1,4 @@
-#!/data/data/com.termux/files/usr/bin/bash
+#!/usr/bin/env bash
 
 # ==========================================================
 # YangYang AI - All-in-One Termux Installer
@@ -55,7 +55,12 @@ if [ "$PLATFORM" = "podroid-alpine" ]; then
     echo "4) OpenCode 설치"
     echo "5) 상태 검사"
     echo "6) 취소"
-    read -r -p "선택 [1-6]: " PODROID_CHOICE
+    if [ -r /dev/tty ]; then
+        read -r -p "선택 [1-6]: " PODROID_CHOICE </dev/tty
+    else
+        echo "[ERROR] 터미널 입력을 열 수 없습니다. bash install.sh로 실행하세요."
+        exit 1
+    fi
     case "$PODROID_CHOICE" in
         1|2|3|4) ;;
         5)
