@@ -98,62 +98,46 @@ else
 fi
 
 echo
+echo "설치 상태 확인"
 echo "=========================================="
-echo "설치된 AI 프로그램 확인"
-echo "=========================================="
-for CMD in hermes openclaw opencode; do
+for CMD in hermes openclaw opencode codex; do
     if command -v "$CMD" >/dev/null 2>&1; then
         echo "[OK] $CMD: $(command -v "$CMD")"
-    else
-        echo "[--] $CMD 미발견 (이 환경의 PATH 기준)"
-    fi
+        "$CMD" --version 2>/dev/null | head -n 1 || true
+    else echo "[--] $CMD 미설치 또는 PATH에서 미발견"; fi
 done
 
-# Codex는 PATH뿐 아니라 이전 Node 22 설치 위치도 확인
-echo
-echo "[CHECK] Codex 위치 확인"
-CODEX_PATH="$(command -v codex 2>/dev/null || true)"
-if [ -n "$CODEX_PATH" ]; then
-    echo "[OK] codex: $CODEX_PATH"
-elif [ -x "/opt/node22/bin/codex" ]; then
-    echo "[OK] codex 파일 발견: /opt/node22/bin/codex (현재 PATH에는 없음)"
-elif [ -x "$HOME/.local/bin/codex" ]; then
-    echo "[OK] codex 파일 발견: $HOME/.local/bin/codex (현재 PATH에는 없음)"
-elif [ -x "$HOME/.npm-global/bin/codex" ]; then
-    echo "[OK] codex 파일 발견: $HOME/.npm-global/bin/codex (현재 PATH에는 없음)"
-else
-    echo "[--] Codex 실행 파일을 알려진 위치에서 찾지 못함"
-fi
-echo "[INFO] Codex는 자동 설치/변경하지 않습니다."
+ask_update() {
+    printf "%s 실행할까? [y/N]: " "$1"
+    read -r ANSWER
+    case "$ANSWER" in y|Y|yes|YES) return 0 ;; *) return 1 ;; esac
+}
 
 echo
-echo "=========================================="
-echo "Hermes 업데이트 (선택)"
+echo "AI 프로그램 업데이트"
 echo "=========================================="
 if command -v hermes >/dev/null 2>&1; then
-    printf "Hermes를 지금 업데이트할까? [y/N]: "
-    read -r ANSWER
-    case "$ANSWER" in
-        y|Y|yes|YES)
-            echo "[INFO] Hermes 자체 업데이트를 실행합니다."
-            echo "[INFO] 실패하면 출력 내용을 확인하고 재설치하지 마세요."
-            hermes update || {
-                echo "[WARN] Hermes 업데이트 실패. 설정/데이터는 이 스크립트에서 삭제하지 않았습니다."
-                FAILED=1
-            }
-            ;;
-        *)
-            echo "[SKIP] Hermes 업데이트 건너뜀"
-            ;;
-    esac
+    if ask_update "Hermes 업데이트"; then hermes update || { echo "[WARN] Hermes 실패"; FAILED=1; }; fi
+fi
+if command -v openclaw >/dev/null 2>&1; then
+    if ask_update "OpenClaw 업데이트"; then openclaw update || { echo "[WARN] OpenClaw 실패"; FAILED=1; }; fi
+fi
+if command -v opencode >/dev/null 2>&1; then
+    if ask_update "OpenCode 업데이트"; then opencode upgrade || { echo "[WARN] OpenCode 실패"; FAILED=1; }; fi
+fi
+if command -v codex >/dev/null 2>&1; then
+    if ask_update "Codex 업데이트"; then
+        if command -v npm >/dev/null 2>&1; then npm install -g @openai/codex@latest || { echo "[WARN] Codex 실패"; FAILED=1; }
+        else echo "[WARN] npm 없음"; FAILED=1; fi
+    fi
 else
-    echo "[SKIP] Hermes 명령어가 이 Termux 환경의 PATH에서 발견되지 않았습니다."
+    echo "[INFO] Codex 미설치"
+    if command -v npm >/dev/null 2>&1 && ask_update "Codex 설치"; then
+        npm install -g @openai/codex@latest || { echo "[WARN] Codex 설치 실패"; FAILED=1; }
+    fi
 fi
 
-echo
-echo "=========================================="
-if [ "$FAILED" -eq 0 ]; then
-    echo "       업데이트 작업 종료"
+echo "       업데이트 작업 종료"
 else
     echo "       일부 작업 확인 필요"
 fi
