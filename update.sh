@@ -117,8 +117,15 @@ echo
 echo "AI 프로그램 업데이트"
 echo "=========================================="
 if command -v hermes >/dev/null 2>&1; then
-    if ask_update "Hermes 업데이트"; then hermes update || { echo "[WARN] Hermes 실패"; FAILED=1; }; fi
-fi
+    if ask_update "Hermes (Termux APT)"; then
+        if command -v pkg >/dev/null 2>&1; then
+            pkg upgrade hermes-agent || { echo "[WARN] Hermes 패키지 업데이트 실패"; FAILED=1; }
+        else
+            echo "[WARN] pkg 명령어를 찾지 못함"; FAILED=1
+        fi
+    else echo "[SKIP] Hermes"; fi
+else echo "[SKIP] Hermes 미설치"; fi
+
 if command -v openclaw >/dev/null 2>&1; then
     if ask_update "OpenClaw 업데이트"; then openclaw update || { echo "[WARN] OpenClaw 실패"; FAILED=1; }; fi
 fi
