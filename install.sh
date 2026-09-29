@@ -164,12 +164,20 @@ echo "========== YangYang AI 메뉴 =========="
 echo "1) 전체 설치"
 echo "2) AI 통합 상태 검사만"
 echo "3) 취소"
-read -r -p "선택 [1-3]: " INSTALL_CHOICE
-case "$INSTALL_CHOICE" in
-    1) ;;
-    2) show_status; exit 0 ;;
-    *) echo "취소했습니다."; exit 0 ;;
-esac
+if [ -r /dev/tty ]; then
+    read -r -p "선택 [1-3]: " INSTALL_CHOICE </dev/tty
+else
+    read -r -p "선택 [1-3]: " INSTALL_CHOICE
+fi
+if [ "$INSTALL_CHOICE" = "1" ]; then
+    :
+elif [ "$INSTALL_CHOICE" = "2" ]; then
+    show_status
+    exit 0
+else
+    echo "취소했습니다."
+    exit 0
+fi
 
 backup_existing() {
     stamp="$(date +%Y%m%d-%H%M%S)"
