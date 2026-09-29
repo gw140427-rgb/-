@@ -101,13 +101,30 @@ echo
 echo "=========================================="
 echo "설치된 AI 프로그램 확인"
 echo "=========================================="
-for CMD in hermes openclaw opencode codex; do
+for CMD in hermes openclaw opencode; do
     if command -v "$CMD" >/dev/null 2>&1; then
         echo "[OK] $CMD: $(command -v "$CMD")"
     else
         echo "[--] $CMD 미발견 (이 환경의 PATH 기준)"
     fi
 done
+
+# Codex는 PATH뿐 아니라 이전 Node 22 설치 위치도 확인
+echo
+echo "[CHECK] Codex 위치 확인"
+CODEX_PATH="$(command -v codex 2>/dev/null || true)"
+if [ -n "$CODEX_PATH" ]; then
+    echo "[OK] codex: $CODEX_PATH"
+elif [ -x "/opt/node22/bin/codex" ]; then
+    echo "[OK] codex 파일 발견: /opt/node22/bin/codex (현재 PATH에는 없음)"
+elif [ -x "$HOME/.local/bin/codex" ]; then
+    echo "[OK] codex 파일 발견: $HOME/.local/bin/codex (현재 PATH에는 없음)"
+elif [ -x "$HOME/.npm-global/bin/codex" ]; then
+    echo "[OK] codex 파일 발견: $HOME/.npm-global/bin/codex (현재 PATH에는 없음)"
+else
+    echo "[--] Codex 실행 파일을 알려진 위치에서 찾지 못함"
+fi
+echo "[INFO] Codex는 자동 설치/변경하지 않습니다."
 
 echo
 echo "=========================================="
