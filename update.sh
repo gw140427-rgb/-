@@ -144,7 +144,8 @@ else
     fi
 fi
 
-echo "       업데이트 작업 종료"
+if [ "$FAILED" -eq 0 ]; then
+    echo "       업데이트 작업 종료"
 else
     echo "       일부 작업 확인 필요"
 fi
