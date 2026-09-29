@@ -22,30 +22,29 @@ fi
 echo "[OK] Debian detected: $(. /etc/os-release; echo "${PRETTY_NAME:-Debian}")"
 echo "[INFO] 기존 Hermes/OpenClaw/Codex 설정과 데이터는 삭제하지 않습니다."
 
-# Detect host Termux binaries leaking into the Debian PRoot environment.
+# Keep the Debian commands ahead of Termux host binaries in PRoot.
+# This changes only this installer process, not the user's shell configuration.
 TERMUX_PREFIX="/data/data/com.termux/files/usr"
-TERMUX_LEAK=0
+export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 echo
 echo "========== 실행 환경 사전 검사 =========="
+TERMUX_LEAK=0
 for name in python3 node npm curl git; do
     path="$(command -v "$name" 2>/dev/null || true)"
     if [ -n "$path" ]; then
-        printf '[CHECK] %-8s %s\\n' "$name" "$path"
+        printf '[CHECK] %-8s %s\n' "$name" "$path"
         case "$path" in
             "$TERMUX_PREFIX"/*) TERMUX_LEAK=1 ;;
         esac
     else
-        printf '[CHECK] %-8s 미설치\\n' "$name"
+        printf '[CHECK] %-8s Debian 경로에서 미발견\n' "$name"
     fi
 done
 if [ "$TERMUX_LEAK" -eq 1 ]; then
-    echo
-    echo "[BLOCK] Termux 실행 파일이 Debian 안에서 감지됐습니다."
-    echo "[BLOCK] 설치를 중단합니다. 기존 도구/데이터는 변경하지 않았습니다."
-    echo "[NEXT] PRoot의 PATH 전달 설정을 먼저 정리한 뒤 다시 실행하세요."
+    echo "[WARN] Termux 경로 혼입이 남아 있습니다. PATH를 확인하세요."
     exit 1
 fi
-echo "[OK] Termux 경로 혼입이 감지되지 않았습니다."
+echo "[OK] Debian PATH 우선 검사 통과"
 
 show_status() {
     echo
