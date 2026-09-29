@@ -164,9 +164,10 @@ echo "========== YangYang AI 메뉴 =========="
 echo "1) Termux AI 전체 설치"
 echo "2) AI 통합 상태 검사만"
 echo "3) Debian Linux 설치 (PRoot)"
-echo "4) 취소"
+echo "4) 기존 Debian 실행"
+echo "5) 취소"
 if [ -r /dev/tty ]; then
-    read -r -p "선택 [1-4]: " INSTALL_CHOICE </dev/tty
+    read -r -p "선택 [1-5]: " INSTALL_CHOICE </dev/tty
 else
     read -r -p "선택 [1-3]: " INSTALL_CHOICE
 fi
@@ -175,6 +176,14 @@ if [ "$INSTALL_CHOICE" = "1" ]; then
 elif [ "$INSTALL_CHOICE" = "2" ]; then
     show_status
     exit 0
+elif [ "$INSTALL_CHOICE" = "4" ]; then
+    if proot-distro list --installed 2>/dev/null | grep -Eq '(^|[[:space:]])debian([[:space:]]|$)'; then
+        echo "[INFO] 기존 Debian을 실행합니다."
+        exec proot-distro login debian
+    else
+        echo "[ERROR] Debian이 설치되어 있지 않습니다. 메뉴 3번으로 먼저 설치하세요."
+        exit 1
+    fi
 elif [ "$INSTALL_CHOICE" = "3" ]; then
     echo
     echo "[INFO] Termux에 Debian PRoot를 설치합니다."
