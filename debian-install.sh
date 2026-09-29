@@ -22,6 +22,31 @@ fi
 echo "[OK] Debian detected: $(. /etc/os-release; echo "${PRETTY_NAME:-Debian}")"
 echo "[INFO] 기존 Hermes/OpenClaw/Codex 설정과 데이터는 삭제하지 않습니다."
 
+# Detect host Termux binaries leaking into the Debian PRoot environment.
+TERMUX_PREFIX="/data/data/com.termux/files/usr"
+TERMUX_LEAK=0
+echo
+echo "========== 실행 환경 사전 검사 =========="
+for name in python3 node npm curl git; do
+    path="$(command -v "$name" 2>/dev/null || true)"
+    if [ -n "$path" ]; then
+        printf '[CHECK] %-8s %s\\n' "$name" "$path"
+        case "$path" in
+            "$TERMUX_PREFIX"/*) TERMUX_LEAK=1 ;;
+        esac
+    else
+        printf '[CHECK] %-8s 미설치\\n' "$name"
+    fi
+done
+if [ "$TERMUX_LEAK" -eq 1 ]; then
+    echo
+    echo "[BLOCK] Termux 실행 파일이 Debian 안에서 감지됐습니다."
+    echo "[BLOCK] 설치를 중단합니다. 기존 도구/데이터는 변경하지 않았습니다."
+    echo "[NEXT] PRoot의 PATH 전달 설정을 먼저 정리한 뒤 다시 실행하세요."
+    exit 1
+fi
+echo "[OK] Termux 경로 혼입이 감지되지 않았습니다."
+
 show_status() {
     echo
     echo "========== Debian 상태 검사 =========="
