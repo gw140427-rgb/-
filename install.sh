@@ -179,7 +179,7 @@ elif [ "$INSTALL_CHOICE" = "2" ]; then
 elif [ "$INSTALL_CHOICE" = "4" ]; then
     if [ -d "$PREFIX/var/lib/proot-distro/containers/debian/rootfs" ] || [ -d "$PREFIX/var/lib/proot-distro/installed-rootfs/debian" ]; then
         echo "[INFO] 기존 Debian을 실행합니다."
-        exec proot-distro login debian
+        proot-distro login debian -- /bin/bash || proot-distro login debian -- /bin/sh
     else
         echo "[ERROR] Debian이 설치되어 있지 않습니다. 메뉴 3번으로 먼저 설치하세요."
         exit 1
@@ -201,7 +201,7 @@ elif [ "$INSTALL_CHOICE" = "3" ]; then
     echo "[OK] Debian 설치 확인 완료"
     echo "[INFO] 지금 Debian 셸을 시작합니다. 종료하려면 exit 입력."
     echo "[INFO] Debian 안에서 AI 설치기는 아래 명령으로 실행할 수 있습니다:"
-    echo "curl -fsSL https://raw.githubusercontent.com/gw140427-rgb/-/main/debian-install.sh -o debian-install.sh && bash debian-install.sh"
+    echo "curl -fL https://github.com/gw140427-rgb/-/raw/refs/heads/main/debian-install.sh -o debian-install.sh && bash debian-install.sh"
     echo
     exec proot-distro login debian
 else
