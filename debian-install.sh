@@ -3,15 +3,20 @@
 # Safe to rerun; does not remove user data or modify Termux installations.
 set -Eeuo pipefail
 
-REPO="https://raw.githubusercontent.com/gw140427-rgb/-/main"
+REPO="https://github.com/gw140427-rgb/-/raw/refs/heads/main"
 BASE="$HOME/YangYang_AI"
 
 echo "=========================================="
 echo " YangYang AI - Debian Installer"
 echo "=========================================="
 
+if [ -f /etc/alpine-release ] || (command -v apk >/dev/null 2>&1 && ! command -v apt-get >/dev/null 2>&1); then
+  echo "[ERROR] 현재는 Alpine/Podroid입니다. Debian 전용 설치기는 실행하지 마세요."
+  echo "[INFO] Podroid에서는 bash ~/YangYang_AI/podroid-install.sh 를 사용하세요."
+  exit 1
+fi
 if ! grep -qiE 'debian|ubuntu' /etc/os-release 2>/dev/null; then
-  echo "[ERROR] Debian/Ubuntu 환경이 아닙니다. proot-distro login debian 으로 접속하세요."
+  echo "[ERROR] Debian/Ubuntu 환경이 아닙니다. Termux에서 proot-distro login debian 으로 접속하세요."
   exit 1
 fi
 
@@ -20,7 +25,7 @@ mkdir -p "$BASE/memory" "$BASE/scripts" "$BASE/logs"
 echo "[1/3] 패키지 목록 업데이트"
 apt-get update
 echo "[2/3] 기본 도구 설치"
-DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl git python3 python3-venv python3-pip nodejs npm bash coreutils findutils
+DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl git python3 python3-venv python3-pip bash coreutils findutils
 
 download() {
   local rel="$1"
@@ -54,7 +59,7 @@ chmod +x "$BASE"/scripts/*.sh 2>/dev/null || true
 echo
 echo "설치 확인:"
 python3 --version
-node --version 2>/dev/null || echo "[WARN] Node.js 실행 확인 필요"
+node --version 2>/dev/null || echo "[INFO] Node.js는 별도 설치가 필요합니다."
 npm --version 2>/dev/null || true
 git --version
 echo "메모리 위치: $BASE/memory"
