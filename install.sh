@@ -19,7 +19,7 @@
 
 set -u
 
-REPO="https://raw.githubusercontent.com/gw140427-rgb/-/main"
+REPO="https://github.com/gw140427-rgb/-/raw/refs/heads/main"
 BASE="$HOME/YangYang_AI"
 
 export PATH="$HOME/.local/bin:$HOME/.opencode/bin:${PREFIX:-}/bin:$PATH"
