@@ -4,7 +4,7 @@
 
 set -u
 
-REPO="https://raw.githubusercontent.com/gw140427-rgb/-/main"
+REPO="https://github.com/gw140427-rgb/-/raw/refs/heads/main"
 BASE="$HOME/YangYang_AI"
 mkdir -p "$BASE/logs"
 LOG_FILE="$BASE/logs/podroid-install-$(date +%Y%m%d-%H%M%S).log"
