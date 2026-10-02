@@ -203,7 +203,16 @@ elif [ "$INSTALL_CHOICE" = "3" ]; then
     echo "[INFO] Debian 안에서 AI 설치기는 아래 명령으로 실행할 수 있습니다:"
     echo "curl -fL https://github.com/gw140427-rgb/-/raw/refs/heads/main/debian-install.sh -o debian-install.sh && bash debian-install.sh"
     echo
-    exec proot-distro login debian
+    echo "[CHECK] Debian 내부 명령 실행 테스트"
+    if proot-distro login debian -- /bin/sh -c "echo DEBIAN_OK"; then
+        echo "[OK] Debian 명령 실행 가능. 대화형 셸을 시작합니다."
+        proot-distro login debian -- /bin/sh
+    else
+        echo "[ERROR] Debian 내부 명령 실행도 실패했습니다."
+        echo "[INFO] 진단 명령: proot-distro login --get-proot-cmd debian"
+        proot-distro login --get-proot-cmd debian || true
+        exit 1
+    fi
 else
     echo "취소했습니다."
     exit 0
