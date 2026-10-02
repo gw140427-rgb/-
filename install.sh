@@ -177,9 +177,26 @@ elif [ "$INSTALL_CHOICE" = "2" ]; then
     show_status
     exit 0
 elif [ "$INSTALL_CHOICE" = "4" ]; then
+    echo "[INFO] Debian 실행 전 검사"
+
+    if ! command -v proot-distro >/dev/null 2>&1; then
+        echo "[ERROR] proot-distro 명령을 찾을 수 없습니다."
+        echo "[INFO] 설치: pkg install proot-distro"
+        exit 1
+    fi
+
+    export PD_FORCE_NO_COLORS=1
+
     if [ -d "$PREFIX/var/lib/proot-distro/containers/debian/rootfs" ] || [ -d "$PREFIX/var/lib/proot-distro/installed-rootfs/debian" ]; then
         echo "[INFO] 기존 Debian을 실행합니다."
-        proot-distro login debian -- /bin/bash || proot-distro login debian -- /bin/sh
+        proot-distro login debian
+        RESULT=$?
+        if [ "$RESULT" -ne 0 ]; then
+            echo "[ERROR] Debian 실행 실패 (종료 코드: $RESULT)"
+            echo "[INFO] 설치 목록을 확인합니다."
+            proot-distro list
+            exit "$RESULT"
+        fi
     else
         echo "[ERROR] Debian이 설치되어 있지 않습니다. 메뉴 3번으로 먼저 설치하세요."
         exit 1
