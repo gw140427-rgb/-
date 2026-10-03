@@ -395,7 +395,33 @@ if command -v hermes >/dev/null 2>&1; then
     hermes --version 2>/dev/null || true
 else
     echo "[INFO] 공식 Termux APT 저장소를 설정합니다."
-    echo "[INFO] 공식 Hermes Termux APT stable 채널을 사용합니다."
+    echo "[INFO] Hermes Termux 채널을 선택하세요."
+    echo "  1) stable  - 안정 채널"
+    echo "  2) canary  - 최신 개발 채널"
+    if [ -r /dev/tty ]; then
+        printf "선택 [1-2, 기본값 1]: "
+        read -r HERMES_CHOICE </dev/tty || HERMES_CHOICE="1"
+    else
+        HERMES_CHOICE="1"
+    fi
+
+    case "$HERMES_CHOICE" in
+        2)
+            HERMES_CHANNEL="canary"
+            HERMES_SUITE="hermes-canary"
+            ;;
+        1|"")
+            HERMES_CHANNEL="stable"
+            HERMES_SUITE="hermes-stable"
+            ;;
+        *)
+            echo "[WARN] 잘못된 선택입니다. stable을 사용합니다."
+            HERMES_CHANNEL="stable"
+            HERMES_SUITE="hermes-stable"
+            ;;
+    esac
+
+    echo "[INFO] 선택된 Hermes 채널: $HERMES_CHANNEL"
     echo "[INFO] 기존 Hermes 설정과 OpenClaw/Codex 데이터는 삭제하지 않습니다."
 
     if ! pkg install -y curl gnupg; then
@@ -405,7 +431,7 @@ else
         SOURCES="$PREFIX/etc/apt/sources.list.d/hermes-agent.list"
         mkdir -p "$PREFIX/etc/apt/keyrings" "$PREFIX/etc/apt/sources.list.d"
 
-        if curl -fsSL "https://hermes-assets.nousresearch.com/releases/termux/stable/key.asc" -o "$KEYRING"; then
+        if curl -fsSL "https://hermes-assets.nousresearch.com/releases/termux/$HERMES_CHANNEL/key.asc" -o "$KEYRING"; then
             # Primary public-key fingerprint (not the signing subkey fingerprint)
             ACTUAL_FPR="$(gpg --batch --with-colons --show-keys "$KEYRING" 2>/dev/null | awk -F: '
                 $1=="pub" { want=1; next }
@@ -415,13 +441,11 @@ else
 
             if [ "$ACTUAL_FPR" = "$EXPECTED_FPR" ]; then
                 echo "[OK] Hermes 저장소 서명 키 확인 완료"
-                printf '%s\n' \
-                    "deb [signed-by=$KEYRING] https://hermes-assets.nousresearch.com/releases/termux/stable hermes-stable main" \
-                    > "$SOURCES"
+                printf '%s\n'                     "deb [signed-by=$KEYRING] https://hermes-assets.nousresearch.com/releases/termux/$HERMES_CHANNEL $HERMES_SUITE main"                     > "$SOURCES"
 
                 if pkg update; then
                     if pkg install -y hermes-agent; then
-                        echo "[OK] Hermes 패키지 설치 완료"
+                        echo "[OK] Hermes 패키지 설치 완료 ($HERMES_CHANNEL)"
                     else
                         echo "[WARN] hermes-agent 설치 실패. 공식 패키지 상태를 확인하세요."
                     fi
@@ -437,7 +461,7 @@ else
         else
             echo "[WARN] Hermes 저장소 키 다운로드 실패. 설치를 건너뜁니다."
         fi
-    fi
+    fi    fi
 fi
 
 export PATH="$HOME/.local/bin:$PREFIX/bin:$PATH"
