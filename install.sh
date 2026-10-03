@@ -381,6 +381,46 @@ echo "[OK] Python 3.13 준비 완료"
 echo
 
 # ----------------------------------------------------------
+# AI 도구 설치 선택
+# ----------------------------------------------------------
+
+echo "=========================================="
+echo "        AI 도구 설치 선택"
+echo "=========================================="
+echo "설치할 AI 도구를 선택하세요."
+echo "  1) Hermes Agent"
+echo "  2) OpenClaw"
+echo "  3) OpenCode"
+echo "  4) 모두 설치"
+echo "  5) 모두 건너뛰기"
+if [ -r /dev/tty ]; then
+    printf "선택 [1-5, 기본값 4]: "
+    read -r AI_INSTALL_CHOICE </dev/tty || AI_INSTALL_CHOICE="4"
+else
+    AI_INSTALL_CHOICE="4"
+fi
+
+INSTALL_HERMES=0
+INSTALL_OPENCLAW=0
+INSTALL_OPENCODE=0
+
+case "$AI_INSTALL_CHOICE" in
+    1) INSTALL_HERMES=1 ;;
+    2) INSTALL_OPENCLAW=1 ;;
+    3) INSTALL_OPENCODE=1 ;;
+    4|"") INSTALL_HERMES=1; INSTALL_OPENCLAW=1; INSTALL_OPENCODE=1 ;;
+    5) ;;
+    *) echo "[WARN] 잘못된 선택입니다. 모두 설치합니다."; INSTALL_HERMES=1; INSTALL_OPENCLAW=1; INSTALL_OPENCODE=1 ;;
+esac
+
+echo "[INFO] 설치 대상:"
+[ "$INSTALL_HERMES" -eq 1 ] && echo "  [✓] Hermes Agent"
+[ "$INSTALL_OPENCLAW" -eq 1 ] && echo "  [✓] OpenClaw"
+[ "$INSTALL_OPENCODE" -eq 1 ] && echo "  [✓] OpenCode"
+[ "$INSTALL_HERMES" -eq 0 ] && [ "$INSTALL_OPENCLAW" -eq 0 ] && [ "$INSTALL_OPENCODE" -eq 0 ] && echo "  [--] AI 도구 설치 안 함"
+echo
+
+# ----------------------------------------------------------
 # [4/7] Hermes Agent (공식 Termux APT)
 # ----------------------------------------------------------
 
@@ -390,7 +430,9 @@ echo "=========================================="
 
 export PATH="$HOME/.local/bin:$PREFIX/bin:$PATH"
 
-if command -v hermes >/dev/null 2>&1; then
+if [ "$INSTALL_HERMES" -eq 0 ]; then
+    echo "[--] Hermes 설치 건너뜀"
+elif command -v hermes >/dev/null 2>&1; then
     echo "[OK] Hermes already installed"
     hermes --version 2>/dev/null || true
 else
@@ -494,6 +536,10 @@ echo "=========================================="
 echo "[5/7] OpenClaw"
 echo "=========================================="
 
+if [ "$INSTALL_OPENCLAW" -eq 0 ]; then
+    echo "[--] OpenClaw 설치 건너뜀"
+else
+
 echo
 echo "Node.js 확인:"
 
@@ -561,6 +607,7 @@ else
     fi
 
 fi
+fi
 
 export PATH="$HOME/.local/bin:$PATH"
 
@@ -573,6 +620,10 @@ echo
 echo "=========================================="
 echo "[6/7] OpenCode"
 echo "=========================================="
+
+if [ "$INSTALL_OPENCODE" -eq 0 ]; then
+    echo "[--] OpenCode 설치 건너뜀"
+else
 
 export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$PATH"
 
@@ -601,6 +652,7 @@ else
 
     fi
 
+fi
 fi
 
 export PATH="$HOME/.opencode/bin:$HOME/.local/bin:$PATH"
