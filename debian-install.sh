@@ -18,9 +18,38 @@ fi
 
 mkdir -p "$BASE/memory" "$BASE/scripts" "$BASE/logs"
 
+# Debian PRoot에서 다른 apt/dpkg 작업이 끝날 때까지 기다립니다.
+wait_for_apt() {
+  local i=0
+  while fuser /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock >/dev/null 2>&1; do
+    i=$((i+1))
+    if [ "$i" -gt 60 ]; then
+      echo "[ERROR] apt/dpkg lock이 60회(약 2분) 이상 유지되고 있습니다."
+      echo "[ERROR] 실행 중인 프로세스:"
+      ps -ef | grep -E '[a]pt|[d]pkg' || true
+      return 1
+    fi
+    echo "[WAIT] 다른 apt/dpkg 작업이 끝날 때까지 대기합니다... ($i/60)"
+    sleep 2
+  done
+}
+
+finish_dpkg() {
+  dpkg --configure -a >/dev/null 2>&1 || true
+}
+
 echo "[1/4] Debian 기본 도구"
+wait_for_apt || exit 1
+finish_dpkg
 apt-get update
-DEBIAN_FRONTEND=noninteractive apt-get install -y   ca-certificates curl git bash coreutils findutils   python3 python3-venv python3-pip
+wait_for_apt || exit 1
+DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl git bash coreutils findutils python3 python3-venv python3-pip
+
+# CA 번들이 설치/복구됐는지 확인합니다.
+if [ ! -s /etc/ssl/certs/ca-certificates.crt ]; then
+  echo "[ERROR] /etc/ssl/certs/ca-certificates.crt를 복구하지 못했습니다."
+  exit 1
+fi
 
 echo
 echo "=========================================="
