@@ -1,47 +1,47 @@
-name: Remote Tool Runner
+name: Local Model Runner
 
 on:
   workflow_dispatch:
     inputs:
-      tool:
-        description: "Safe diagnostic tool to run on the GitHub runner"
+      prompt:
+        description: "Prompt for the local model"
         required: true
-        type: choice
-        options:
-          - system
-          - memory
-          - disk
-          - processes
+        type: string
 
 permissions:
   contents: read
 
 jobs:
-  run-tool:
+  local-model:
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 15
+
     steps:
-      - name: Run selected diagnostic
-        shell: bash
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake git curl
+
+      - name: Build llama.cpp
+        run: |
+          git clone --depth 1 https://github.com/ggml-org/llama.cpp.git
+          cmake -S llama.cpp -B llama.cpp/build -DGGML_NATIVE=OFF
+          cmake --build llama.cpp/build --config Release -j2 --target llama-cli
+
+      - name: Download small local GGUF model
+        run: |
+          mkdir -p models
+          curl -L --fail --retry 3 \
+            -o models/qwen2.5-0.5b-instruct-q4_k_m.gguf \
+            https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf
+
+      - name: Run model locally
         env:
-          TOOL: ${{ inputs.tool }}
+          PROMPT: ${{ inputs.prompt }}
         run: |
           set -euo pipefail
-          case "$TOOL" in
-            system)
-              uname -a
-              ;;
-            memory)
-              free -h || cat /proc/meminfo
-              ;;
-            disk)
-              df -h
-              ;;
-            processes)
-              ps -eo pid,comm,%cpu,%mem --sort=-%mem | head -20
-              ;;
-            *)
-              echo "Unknown tool"
-              exit 1
-              ;;
-          esac
+          ./llama.cpp/build/bin/llama-cli \
+            -m models/qwen2.5-0.5b-instruct-q4_k_m.gguf \
+            -c 2048 \
+            -n 256 \
+            -p "$PROMPT"
