@@ -20,13 +20,21 @@ mkdir -p "$BASE/memory" "$BASE/scripts" "$BASE/logs"
 
 # Debian PRoot에서 다른 apt/dpkg 작업이 끝날 때까지 기다립니다.
 wait_for_apt() {
-  local i=0
-  while fuser /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock >/dev/null 2>&1; do
+  local i=0 cmd busy
+  while :; do
+    busy=0
+    for p in /proc/[0-9]*; do
+      [ -r "$p/cmdline" ] || continue
+      cmd="$(tr '\0' ' ' < "$p/cmdline" 2>/dev/null || true)"
+      case "$cmd" in
+        *apt-get*|*apt\ *|*dpkg*) busy=1; break ;;
+      esac
+    done
+    [ "$busy" -eq 0 ] && break
     i=$((i+1))
     if [ "$i" -gt 60 ]; then
-      echo "[ERROR] apt/dpkg lock이 60회(약 2분) 이상 유지되고 있습니다."
-      echo "[ERROR] 실행 중인 프로세스:"
-      ps -ef | grep -E '[a]pt|[d]pkg' || true
+      echo "[ERROR] apt/dpkg 작업이 60회(약 2분) 이상 끝나지 않았습니다."
+      ps -ef 2>/dev/null | grep -E '[a]pt|[d]pkg' || true
       return 1
     fi
     echo "[WAIT] 다른 apt/dpkg 작업이 끝날 때까지 대기합니다... ($i/60)"
