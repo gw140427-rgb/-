@@ -223,7 +223,13 @@ elif [ "$INSTALL_CHOICE" = "3" ]; then
     echo "[CHECK] Debian 내부 명령 실행 테스트"
     if proot-distro login debian -- /bin/sh -c "echo DEBIAN_OK"; then
         echo "[OK] Debian 명령 실행 가능. 대화형 셸을 시작합니다."
-        proot-distro login debian -- /bin/sh
+        # curl | bash의 stdin(설치 스크립트)이 Debian 셸로 넘어가지 않도록 실제 터미널을 연결합니다.
+        if [ -r /dev/tty ]; then
+            proot-distro login debian -- /bin/sh </dev/tty
+        else
+            echo "[ERROR] Debian 대화형 터미널(/dev/tty)을 열 수 없습니다."
+            exit 1
+        fi
         # Debian 셸을 종료하면 Termux용 설치 단계로 넘어가지 않도록 여기서 종료합니다.
         exit 0
     else
