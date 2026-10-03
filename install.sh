@@ -271,7 +271,9 @@ fi
 echo
 echo "[INFO] 기본 패키지 업그레이드"
 
-pkg upgrade -y || {
+# Prevent dpkg conffile prompts from consuming the install script's stdin.
+# Keep the user's existing Termux configuration files (e.g. sources.list/profile).
+apt-get -y -o Dpkg::Options::=--force-confold upgrade || {
     echo "[WARN] pkg upgrade 실패"
     echo "설치를 계속 시도합니다."
 }
