@@ -6,6 +6,12 @@ set -Eeuo pipefail
 REPO="https://github.com/gw140427-rgb/-/raw/refs/heads/main"
 BASE="$HOME/YangYang_AI"
 
+# PRoot Debian에서 Termux 호스트의 실행 파일을 잘못 잡지 않도록 PATH를 Debian 기준으로 고정합니다.
+# 특히 /data/data/com.termux/.../hermes-agent가 Debian Hermes로 오인되는 문제를 막습니다.
+PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$HOME/.local/bin:$HOME/.openclaw/bin:$HOME/.opencode/bin"
+export PATH
+hash -r 2>/dev/null || true
+
 echo
 echo "=========================================="
 echo " YangYang AI - Debian AI Installer"
@@ -99,10 +105,18 @@ echo "[2/4] 선택된 AI 도구"
 install_hermes() {
   echo
   echo "----- Hermes Agent (공식 Linux 설치기) -----"
-  if command -v hermes >/dev/null 2>&1; then
-    echo "[OK] Hermes already installed"
+  local hermes_path=""
+  hermes_path="$(command -v hermes 2>/dev/null || true)"
+  if [ -n "$hermes_path" ] && [[ "$hermes_path" != /data/data/com.termux/* ]]; then
+    echo "[OK] Debian Hermes already installed: $hermes_path"
     hermes --version 2>/dev/null || true
     return 0
+  fi
+  if [ -n "$hermes_path" ]; then
+    echo "[WARN] Termux Hermes가 PATH에 잡혔습니다: $hermes_path"
+    echo "[INFO] Debian용 Hermes를 별도로 설치합니다."
+    unset -f hermes 2>/dev/null || true
+    hash -r 2>/dev/null || true
   fi
 
   if curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash; then
@@ -192,7 +206,13 @@ echo "OS: $(. /etc/os-release && echo "$PRETTY_NAME")"
 echo "Arch: $(uname -m)"
 python3 --version
 git --version
-command -v hermes >/dev/null 2>&1 && hermes --version 2>/dev/null || echo "[--] Hermes"
+HERMES_PATH="$(command -v hermes 2>/dev/null || true)"
+if [ -n "$HERMES_PATH" ] && [[ "$HERMES_PATH" == /data/data/com.termux/* ]]; then
+  echo "[ERROR] Hermes가 Termux 경로를 가리킵니다: $HERMES_PATH"
+  echo "[ERROR] Debian Hermes 설치가 확인되지 않았습니다."
+else
+  [ -n "$HERMES_PATH" ] && echo "Hermes: $HERMES_PATH" && hermes --version 2>/dev/null || echo "[--] Hermes"
+fi
 command -v openclaw >/dev/null 2>&1 && openclaw --version 2>/dev/null || echo "[--] OpenClaw"
 command -v opencode >/dev/null 2>&1 && opencode --version 2>/dev/null || echo "[--] OpenCode"
 
