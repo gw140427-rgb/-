@@ -222,7 +222,21 @@ elif [ "$INSTALL_CHOICE" = "3" ]; then
     echo "[INFO] Debian의 apt/dpkg 및 CA 인증서를 먼저 확인합니다."
     if proot-distro login debian -- /bin/sh -c '
         set -e
-        wait_for_apt() { i=0; while fuser /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock >/dev/null 2>&1; do i=$((i+1)); [ "$i" -le 60 ] || exit 1; sleep 2; done; }
+        wait_for_apt() {
+            i=0
+            while :; do
+                busy=0
+                for p in /proc/[0-9]*; do
+                    [ -r "$p/cmdline" ] || continue
+                    cmd="$(tr '\0' ' ' < "$p/cmdline" 2>/dev/null || true)"
+                    case "$cmd" in *apt-get*|*apt\ *|*dpkg*) busy=1; break;; esac
+                done
+                [ "$busy" -eq 0 ] && break
+                i=$((i+1)); [ "$i" -le 60 ] || exit 1
+                echo "[WAIT] Debian apt/dpkg 작업 종료 대기... ($i/60)"
+                sleep 2
+            done
+        }
         wait_for_apt
         dpkg --configure -a || true
         wait_for_apt
