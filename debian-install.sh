@@ -123,10 +123,90 @@ install_hermes() {
     export PATH="/usr/local/bin:$HOME/.local/bin:$PATH"
     echo "[OK] Hermes 설치 완료"
     hermes --version 2>/dev/null || true
-  else
-    echo "[WARN] Hermes 설치 실패"
+    return 0
+  fi
+
+  # Debian PRoot ARM64에서 uv가 Python 3.14를 다운로드한 뒤
+  # managed interpreter 검색에 실패하는 경우를 위한 복구 경로입니다.
+  # 공식 설치기의 소스/PM 구조는 그대로 사용하고, Termux 환경은 건드리지 않습니다.
+  echo "[WARN] 공식 Hermes bootstrap 실패. ARM64 uv Python 복구를 시도합니다."
+  local hermes_dir="$HOME/.hermes/hermes-agent"
+  local uv_cmd=""
+  local boot_py=""
+  local uv_py_dir=""
+
+  for candidate in "$HOME/.local/bin/uv" "$HOME/.hermes/bin/uv" "/usr/local/bin/uv"; do
+    if [ -x "$candidate" ]; then
+      uv_cmd="$candidate"
+      break
+    fi
+  done
+
+  if [ -z "$uv_cmd" ]; then
+    echo "[ERROR] Hermes용 uv를 찾지 못했습니다."
     return 1
   fi
+
+  uv_py_dir="$("$uv_cmd" python dir 2>/dev/null || true)"
+
+  if [ -n "$uv_py_dir" ] && [ -d "$uv_py_dir" ]; then
+    boot_py="$(find "$uv_py_dir" -type f -path '*/bin/python3.14' -perm -u+x 2>/dev/null | head -n 1 || true)"
+    [ -z "$boot_py" ] && boot_py="$(find "$uv_py_dir" -type f -name 'python3.14' -perm -u+x 2>/dev/null | head -n 1 || true)"
+  fi
+
+  if [ -z "$boot_py" ]; then
+    echo "[INFO] uv가 Python 3.14를 다시 설치하도록 시도합니다."
+    "$uv_cmd" python install 3.14 || true
+    uv_py_dir="$("$uv_cmd" python dir 2>/dev/null || true)"
+    if [ -n "$uv_py_dir" ] && [ -d "$uv_py_dir" ]; then
+      boot_py="$(find "$uv_py_dir" -type f -path '*/bin/python3.14' -perm -u+x 2>/dev/null | head -n 1 || true)"
+      [ -z "$boot_py" ] && boot_py="$(find "$uv_py_dir" -type f -name 'python3.14' -perm -u+x 2>/dev/null | head -n 1 || true)"
+    fi
+  fi
+
+  if [ -z "$boot_py" ] || [ ! -x "$boot_py" ]; then
+    echo "[ERROR] Python 3.14 실행 파일을 찾지 못했습니다."
+    return 1
+  fi
+
+  echo "[OK] 복구된 Python: $boot_py"
+  if ! "$boot_py" --version; then
+    echo "[ERROR] 복구된 Python을 실행할 수 없습니다."
+    return 1
+  fi
+
+  if [ ! -f "$hermes_dir/pm/cli.py" ]; then
+    echo "[ERROR] Hermes PM 파일을 찾지 못했습니다: $hermes_dir/pm/cli.py"
+    return 1
+  fi
+
+  echo "[INFO] Hermes 의존성을 PM으로 설치합니다."
+  if ! (cd "$hermes_dir" && "$boot_py" -m pm.cli install); then
+    echo "[ERROR] Hermes PM 설치에 실패했습니다."
+    return 1
+  fi
+
+  echo "[INFO] Hermes 명령을 빌드합니다."
+  if ! (cd "$hermes_dir" && "$boot_py" -I -B -X utf8 hermes_cli/source_completion.py --source "$hermes_dir"); then
+    echo "[ERROR] Hermes 명령 빌드에 실패했습니다."
+    return 1
+  fi
+
+  mkdir -p "$HOME/.hermes/bin"
+  if ! "$boot_py" -I -X utf8 "$hermes_dir/hermes_cli/_launchers.py" "$HOME/.hermes/bin"; then
+    echo "[ERROR] Hermes launcher 생성에 실패했습니다."
+    return 1
+  fi
+
+  export PATH="$HOME/.hermes/bin:/usr/local/bin:$HOME/.local/bin:$PATH"
+  if command -v hermes >/dev/null 2>&1; then
+    echo "[OK] Hermes ARM64 복구 설치 완료"
+    hermes --version 2>/dev/null || true
+    return 0
+  fi
+
+  echo "[WARN] Hermes 복구 설치 후에도 hermes 명령을 찾지 못했습니다."
+  return 1
 }
 
 install_openclaw() {
