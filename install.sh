@@ -224,6 +224,8 @@ elif [ "$INSTALL_CHOICE" = "3" ]; then
     if proot-distro login debian -- /bin/sh -c "echo DEBIAN_OK"; then
         echo "[OK] Debian 명령 실행 가능. 대화형 셸을 시작합니다."
         proot-distro login debian -- /bin/sh
+        # Debian 셸을 종료하면 Termux용 설치 단계로 넘어가지 않도록 여기서 종료합니다.
+        exit 0
     else
         echo "[ERROR] Debian 내부 명령 실행도 실패했습니다."
         echo "[INFO] 진단 명령: proot-distro login --get-proot-cmd debian"
