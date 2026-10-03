@@ -197,6 +197,8 @@ elif [ "$INSTALL_CHOICE" = "4" ]; then
             proot-distro list
             exit "$RESULT"
         fi
+        # 메뉴 4는 Debian 실행만 수행하고 Termux AI 설치 단계로 넘어가지 않습니다.
+        exit 0
     else
         echo "[ERROR] Debian이 설치되어 있지 않습니다. 메뉴 3번으로 먼저 설치하세요."
         exit 1
