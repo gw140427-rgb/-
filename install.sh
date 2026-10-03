@@ -161,9 +161,9 @@ show_status() {
 }
 
 echo "========== YangYang AI 메뉴 =========="
-echo "1) Termux AI 전체 설치"
+echo "1) 전체 설치 (Termux + Debian AI)"
 echo "2) AI 통합 상태 검사만"
-echo "3) Debian Linux 설치 (PRoot)"
+echo "3) Debian Linux 설치 + AI"
 echo "4) 기존 Debian 실행"
 echo "5) 취소"
 if [ -r /dev/tty ]; then
@@ -172,7 +172,7 @@ else
     read -r -p "선택 [1-5]: " INSTALL_CHOICE
 fi
 if [ "$INSTALL_CHOICE" = "1" ]; then
-    :
+    FULL_INSTALL=1
 elif [ "$INSTALL_CHOICE" = "2" ]; then
     show_status
     exit 0
@@ -202,6 +202,7 @@ elif [ "$INSTALL_CHOICE" = "4" ]; then
         exit 1
     fi
 elif [ "$INSTALL_CHOICE" = "3" ]; then
+    FULL_INSTALL=0
     echo
     echo "[INFO] Termux에 Debian PRoot를 설치합니다."
     if ! command -v proot-distro >/dev/null 2>&1; then
@@ -956,3 +957,55 @@ echo
 echo "=========================================="
 echo " YangYang AI 설치 프로그램 종료"
 echo "=========================================="
+
+
+# ----------------------------------------------------------
+# 전체 설치: Debian + Debian AI 설치기
+# ----------------------------------------------------------
+if [ "${FULL_INSTALL:-0}" = "1" ]; then
+    echo
+    echo "=========================================="
+    echo " Debian Linux + Debian AI"
+    echo "=========================================="
+
+    if ! command -v proot-distro >/dev/null 2>&1; then
+        echo "[INFO] proot-distro 설치"
+        pkg update -y && pkg install -y proot-distro || {
+            echo "[ERROR] proot-distro 설치 실패"
+            exit 1
+        }
+    fi
+
+    if [ -d "$PREFIX/var/lib/proot-distro/containers/debian/rootfs" ] || [ -d "$PREFIX/var/lib/proot-distro/installed-rootfs/debian" ]; then
+        echo "[OK] 기존 Debian 유지"
+    else
+        echo "[INFO] Debian 설치"
+        proot-distro install debian || {
+            echo "[ERROR] Debian 설치 실패"
+            exit 1
+        }
+    fi
+
+    echo "[INFO] Debian AI 설치기를 다운로드합니다."
+    echo "[INFO] 기존 Termux AI 설정은 변경하지 않습니다."
+
+    if proot-distro login debian -- /bin/sh -c "command -v curl >/dev/null 2>&1 || (apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl)" </dev/tty; then
+        if proot-distro login debian -- /bin/sh -c "curl -fL https://github.com/gw140427-rgb/-/raw/refs/heads/main/debian-install.sh -o /root/debian-install.sh" </dev/tty; then
+            echo "[OK] Debian AI 설치기 다운로드 완료"
+            if [ -r /dev/tty ]; then
+                proot-distro login debian -- /bin/bash /root/debian-install.sh </dev/tty
+            else
+                echo "[ERROR] Debian 대화형 터미널(/dev/tty)을 열 수 없습니다."
+                exit 1
+            fi
+        else
+            echo "[ERROR] Debian AI 설치기 다운로드 실패"
+            exit 1
+        fi
+    else
+        echo "[ERROR] Debian 기본 도구 준비 실패"
+        exit 1
+    fi
+
+    echo "[OK] 전체 설치 흐름 종료"
+fi
