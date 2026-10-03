@@ -395,7 +395,7 @@ if command -v hermes >/dev/null 2>&1; then
     hermes --version 2>/dev/null || true
 else
     echo "[INFO] 공식 Termux APT 저장소를 설정합니다."
-    echo "[WARN] 공식 문서상 stable 채널은 현재 복구 중이므로 canary를 사용합니다."
+    echo "[INFO] 공식 Hermes Termux APT stable 채널을 사용합니다."
     echo "[INFO] 기존 Hermes 설정과 OpenClaw/Codex 데이터는 삭제하지 않습니다."
 
     if ! pkg install -y curl gnupg; then
@@ -405,7 +405,7 @@ else
         SOURCES="$PREFIX/etc/apt/sources.list.d/hermes-agent.list"
         mkdir -p "$PREFIX/etc/apt/keyrings" "$PREFIX/etc/apt/sources.list.d"
 
-        if curl -fsSL "https://hermes-assets.nousresearch.com/releases/termux/canary/key.asc" -o "$KEYRING"; then
+        if curl -fsSL "https://hermes-assets.nousresearch.com/releases/termux/stable/key.asc" -o "$KEYRING"; then
             # Primary public-key fingerprint (not the signing subkey fingerprint)
             ACTUAL_FPR="$(gpg --batch --with-colons --show-keys "$KEYRING" 2>/dev/null | awk -F: '
                 $1=="pub" { want=1; next }
@@ -416,7 +416,7 @@ else
             if [ "$ACTUAL_FPR" = "$EXPECTED_FPR" ]; then
                 echo "[OK] Hermes 저장소 서명 키 확인 완료"
                 printf '%s\n' \
-                    "deb [signed-by=$KEYRING] https://hermes-assets.nousresearch.com/releases/termux/canary hermes-canary main" \
+                    "deb [signed-by=$KEYRING] https://hermes-assets.nousresearch.com/releases/termux/stable hermes-stable main" \
                     > "$SOURCES"
 
                 if pkg update; then
