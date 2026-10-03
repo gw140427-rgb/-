@@ -445,6 +445,17 @@ export PATH="$HOME/.local/bin:$PREFIX/bin:$PATH"
 echo
 echo "Hermes 확인:"
 if command -v hermes >/dev/null 2>&1; then
+    HERMES_PKG_VERSION="$(dpkg-query -W -f='\${Version}' hermes-agent 2>/dev/null || true)"
+    if [ -n "$HERMES_PKG_VERSION" ]; then
+        case "$HERMES_PKG_VERSION" in
+            *~canary.*) HERMES_CHANNEL="canary" ;;
+            *) HERMES_CHANNEL="stable" ;;
+        esac
+        echo "[OK] Hermes APT 패키지: $HERMES_PKG_VERSION ($HERMES_CHANNEL)"
+    else
+        echo "[INFO] Hermes APT 패키지 버전: 확인 실패"
+    fi
+    echo "[INFO] Hermes CLI:"
     hermes --version 2>/dev/null || true
 else
     echo "[--] Hermes 미설치 (Termux 공식 패키지 상태 확인 필요)"
