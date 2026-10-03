@@ -219,6 +219,23 @@ elif [ "$INSTALL_CHOICE" = "3" ]; then
     fi
     echo
     echo "[OK] Debian 설치 확인 완료"
+    echo "[INFO] Debian의 apt/dpkg 및 CA 인증서를 먼저 확인합니다."
+    if proot-distro login debian -- /bin/sh -c '
+        set -e
+        wait_for_apt() { i=0; while fuser /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock >/dev/null 2>&1; do i=$((i+1)); [ "$i" -le 60 ] || exit 1; sleep 2; done; }
+        wait_for_apt
+        dpkg --configure -a || true
+        wait_for_apt
+        apt-get update
+        wait_for_apt
+        DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl
+        update-ca-certificates
+    '; then
+        echo "[OK] Debian CA/기본 다운로드 환경 준비 완료"
+    else
+        echo "[ERROR] Debian apt/CA 준비 실패"
+        exit 1
+    fi
     echo "[INFO] 지금 Debian 셸을 시작합니다. 종료하려면 exit 입력."
     echo "[INFO] Debian 안에서 AI 설치기는 아래 명령으로 실행할 수 있습니다:"
     echo "curl -fL https://github.com/gw140427-rgb/-/raw/refs/heads/main/debian-install.sh -o debian-install.sh && bash debian-install.sh"
@@ -991,7 +1008,17 @@ if [ "${FULL_INSTALL:-0}" = "1" ]; then
     echo "[INFO] Debian AI 설치기를 다운로드합니다."
     echo "[INFO] 기존 Termux AI 설정은 변경하지 않습니다."
 
-    if proot-distro login debian -- /bin/sh -c "command -v curl >/dev/null 2>&1 || (apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl)" </dev/tty; then
+    if proot-distro login debian -- /bin/sh -c '
+        set -e
+        wait_for_apt() { i=0; while fuser /var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/cache/apt/archives/lock >/dev/null 2>&1; do i=$((i+1)); [ "$i" -le 60 ] || exit 1; sleep 2; done; }
+        wait_for_apt
+        dpkg --configure -a || true
+        wait_for_apt
+        apt-get update
+        wait_for_apt
+        DEBIAN_FRONTEND=noninteractive apt-get install -y ca-certificates curl
+        update-ca-certificates
+    ' </dev/tty; then
         if proot-distro login debian -- /bin/sh -c "curl -fL https://github.com/gw140427-rgb/-/raw/refs/heads/main/debian-install.sh -o /root/debian-install.sh" </dev/tty; then
             echo "[OK] Debian AI 설치기 다운로드 완료"
             if [ -r /dev/tty ]; then
