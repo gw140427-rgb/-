@@ -135,7 +135,7 @@ install_hermes() {
   local boot_py=""
   local uv_py_dir=""
 
-  for candidate in "$HOME/.local/bin/uv" "$HOME/.hermes/bin/uv" "/usr/local/bin/uv"; do
+  for candidate in "$HOME/.hermes/tools/uv-"*/uv "$HOME/.local/bin/uv" "$HOME/.hermes/bin/uv" "/usr/local/bin/uv"; do
     if [ -x "$candidate" ]; then
       uv_cmd="$candidate"
       break
