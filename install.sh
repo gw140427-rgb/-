@@ -503,7 +503,7 @@ else
         else
             echo "[WARN] Hermes 저장소 키 다운로드 실패. 설치를 건너뜁니다."
         fi
-    fi    fi
+    fi
 fi
 
 export PATH="$HOME/.local/bin:$PREFIX/bin:$PATH"
