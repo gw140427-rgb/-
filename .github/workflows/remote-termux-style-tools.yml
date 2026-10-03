@@ -1,0 +1,47 @@
+name: Remote Tool Runner
+
+on:
+  workflow_dispatch:
+    inputs:
+      tool:
+        description: "Safe diagnostic tool to run on the GitHub runner"
+        required: true
+        type: choice
+        options:
+          - system
+          - memory
+          - disk
+          - processes
+
+permissions:
+  contents: read
+
+jobs:
+  run-tool:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Run selected diagnostic
+        shell: bash
+        env:
+          TOOL: ${{ inputs.tool }}
+        run: |
+          set -euo pipefail
+          case "$TOOL" in
+            system)
+              uname -a
+              ;;
+            memory)
+              free -h || cat /proc/meminfo
+              ;;
+            disk)
+              df -h
+              ;;
+            processes)
+              ps -eo pid,comm,%cpu,%mem --sort=-%mem | head -20
+              ;;
+            *)
+              echo "Unknown tool"
+              exit 1
+              ;;
+          esac
